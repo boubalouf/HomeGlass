@@ -73,7 +73,7 @@ cd homeglass-server && .venv/bin/pytest   # 103 fonctions de test Python
 ### Installer l'add-on
 
 1. Home Assistant → **Paramètres → Modules complémentaires → Boutique → ⋮ → Dépôts**,
-   ajouter l'URL du dépôt d'add-ons.
+   ajouter l'URL du dépôt d'add-ons : ``` https://github.com/boubalouf/HomeGlass-Addon ```.
 2. Installer **HomeGlass Server**, démarrer, ouvrir le panneau **HomeGlass**.
 3. Le port `8765` expose l'API utilisée par l'application (option `api_port`).
 
