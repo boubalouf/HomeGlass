@@ -1,0 +1,209 @@
+{
+  "schemaVersion": 1,
+  "revision": 12,
+  "publishedAt": "2026-11-04T13:00:00Z",
+  "theme": {
+    "mode": "auto",
+    "accent": "#FF9500",
+    "tileRadiusDp": 22,
+    "density": "standard",
+    "background": { "type": "gradient", "assetId": null, "blurDp": 0, "dim": 0.0 }
+  },
+  "tabs": [
+    { "id": "home", "type": "home", "label": "Maison", "icon": "home", "enabled": true },
+    { "id": "rooms", "type": "rooms", "label": "Pièces", "icon": "meeting_room", "enabled": true },
+    { "id": "settings", "type": "settings", "label": "Réglages", "icon": "settings", "enabled": true }
+  ],
+  "home": {
+    "title": "Maison",
+    "summaryChips": ["lights", "climate", "security", "media", "energy"],
+    "sections": [
+      {
+        "id": "sec_scenes",
+        "kind": "scenes",
+        "title": "Scènes",
+        "items": [
+          {
+            "id": "scene_evening",
+            "name": "Soirée",
+            "icon": "bedtime",
+            "gradient": ["#FF9500", "#FF375F"],
+            "actions": [
+              {
+                "type": "call_service",
+                "service": "scene.turn_on",
+                "data": null,
+                "target": { "entity_id": "scene.soiree" },
+                "roomId": null
+              }
+            ]
+          },
+          {
+            "id": "scene_morning",
+            "name": "Réveil",
+            "icon": "wb_sunny",
+            "gradient": ["#FFD60A", "#FF9F0A"],
+            "actions": [
+              { "type": "call_service", "service": "scene.turn_on", "data": null, "target": { "entity_id": "scene.reveil" } }
+            ]
+          },
+          {
+            "id": "scene_away",
+            "name": "Absent",
+            "icon": "shield",
+            "gradient": ["#5E5CE6", "#BF5AF2"],
+            "actions": [{ "type": "call_service", "service": "scene.turn_on", "target": { "entity_id": "scene.absent" } }]
+          },
+          {
+            "id": "scene_movie",
+            "name": "Cinéma",
+            "icon": "tv",
+            "gradient": ["#64D2FF", "#5E5CE6"],
+            "actions": [{ "type": "call_service", "service": "scene.turn_on", "target": { "entity_id": "scene.cinema" } }]
+          }
+        ]
+      },
+      {
+        "id": "sec_favoris",
+        "kind": "tiles",
+        "title": "Favoris",
+        "items": [
+          {
+            "id": "tile_salon",
+            "entityId": "light.salon",
+            "name": "Lampe du salon",
+            "icon": "lightbulb",
+            "accent": null,
+            "size": "small",
+            "display": "slider",
+            "hidden": false,
+            "tap": { "type": "toggle", "service": null, "data": null, "target": null, "roomId": null },
+            "longPress": { "type": "more_info", "service": null, "data": null, "target": null, "roomId": null }
+          },
+          {
+            "id": "tile_thermostat",
+            "entityId": "climate.salon",
+            "name": "Thermostat",
+            "icon": "thermostat",
+            "accent": "#FF9500",
+            "size": "wide",
+            "display": "value",
+            "hidden": false,
+            "tap": { "type": "more_info" },
+            "longPress": { "type": "more_info" }
+          },
+          {
+            "id": "tile_serrure",
+            "entityId": "lock.entree",
+            "name": "Serrure entrée",
+            "icon": "lock",
+            "accent": null,
+            "size": "small",
+            "display": "auto",
+            "hidden": false,
+            "tap": { "type": "toggle" },
+            "longPress": null
+          },
+          {
+            "id": "tile_vacuum",
+            "entityId": "vacuum.salon",
+            "name": "Aspirateur",
+            "icon": "cleaning_services",
+            "accent": null,
+            "size": "large",
+            "display": "auto",
+            "hidden": false,
+            "tap": { "type": "toggle" },
+            "longPress": { "type": "more_info" }
+          }
+        ]
+      },
+      {
+        "id": "sec_eclairage",
+        "kind": "tiles",
+        "title": "Éclairage",
+        "items": [
+          {
+            "id": "tile_cuisine_plafond",
+            "entityId": "light.cuisine_plafond",
+            "name": "Plafonnier cuisine",
+            "icon": "lightbulb",
+            "accent": null,
+            "size": "wide",
+            "display": "button",
+            "hidden": false,
+            "tap": { "type": "toggle" },
+            "longPress": { "type": "more_info" }
+          },
+          {
+            "id": "tile_prise_bureau",
+            "entityId": "switch.bureau",
+            "name": "Prise bureau",
+            "icon": "toggle_on",
+            "accent": null,
+            "size": "small",
+            "display": "button",
+            "hidden": false,
+            "tap": { "type": "toggle" },
+            "longPress": { "type": "more_info" }
+          },
+          {
+            "id": "tile_cachee",
+            "entityId": "light.couloir",
+            "name": "Lampe du couloir",
+            "icon": "lightbulb",
+            "accent": null,
+            "size": "small",
+            "display": "auto",
+            "hidden": true,
+            "tap": { "type": "toggle" },
+            "longPress": null
+          }
+        ]
+      },
+      {
+        "id": "sec_securite",
+        "kind": "tiles",
+        "title": "Sécurité",
+        "items": [
+          {
+            "id": "tile_alarme",
+            "entityId": "alarm_control_panel.maison",
+            "name": "Alarme",
+            "icon": "shield",
+            "accent": null,
+            "size": "small",
+            "display": "button",
+            "hidden": false,
+            "tap": { "type": "more_info" },
+            "longPress": { "type": "more_info" }
+          },
+          {
+            "id": "tile_camera",
+            "entityId": "camera.entree",
+            "name": "Caméra entrée",
+            "icon": "camera_alt",
+            "accent": null,
+            "size": "wide",
+            "display": "auto",
+            "hidden": false,
+            "tap": { "type": "more_info" },
+            "longPress": null
+          }
+        ]
+      },
+      {
+        "id": "sec_qui_nexiste_pas_encore",
+        "kind": "kind_inconnu_du_client",
+        "title": "Section future",
+        "items": [
+          { "id": "item_futur", "entityId": "sensor.nouveau", "name": "Nouveau capteur", "icon": "icon_inconnue" }
+        ]
+      }
+    ]
+  },
+  "rooms": [
+    { "id": "room_salon", "name": "Salon", "icon": "weekend", "areaId": "salon", "sections": [] },
+    { "id": "room_cuisine", "name": "Cuisine", "icon": "kitchen", "areaId": "cuisine", "sections": [] }
+  ]
+}

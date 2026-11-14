@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    HTTP en clair : réservé aux adresses privées.
+
+    Android n'accepte pas d'expression CIDR (192.168.0.0/16…) dans ce fichier, et les IP d'une
+    installation changent d'un foyer à l'autre : impossible de lister à l'avance les hôtes
+    autorisés. Le trafic clair est donc laissé possible au niveau plateforme, et c'est
+    l'application qui refuse le HTTP vers une adresse publique :
+      - `CleartextPolicy.isAllowed()` à la saisie et avant chaque connexion,
+      - `HttpClientFactory` (intercepteur OkHttp) pour tout appel REST/WebSocket.
+
+    Le trafic HTTPS garde les autorités de certification du système.
+-->
+<network-security-config>
+    <base-config cleartextTrafficPermitted="true">
+        <trust-anchors>
+            <certificates src="system" />
+        </trust-anchors>
+    </base-config>
+</network-security-config>

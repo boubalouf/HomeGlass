@@ -1,0 +1,224 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+
+    <string name="app_name">HomeGlass</string>
+
+    <!-- États d\'entité -->
+    <string name="entity_state_on">Allumé</string>
+    <string name="entity_state_off">Éteint</string>
+    <string name="state_unavailable">Indisponible</string>
+    <string name="state_locked">Verrouillée</string>
+    <string name="state_unlocked">Déverrouillée</string>
+    <string name="state_open">Ouvert</string>
+    <string name="state_closed">Fermé</string>
+    <string name="state_opening">Ouverture…</string>
+    <string name="state_closing">Fermeture…</string>
+    <string name="state_playing">En lecture</string>
+    <string name="state_paused">En pause</string>
+    <string name="state_idle">Inactif</string>
+    <string name="state_ready">Prête</string>
+    <string name="state_armed">Armée</string>
+
+    <!-- Valeurs formatées -->
+    <string name="value_percent">%1$d\u00A0%%</string>
+    <string name="value_percent_text">%1$s\u00A0%%</string>
+    <string name="value_temperature">%1$s\u00A0°C</string>
+    <string name="value_kelvin">%1$s\u00A0K</string>
+
+    <string name="state_open_percent">Ouvert · %1$d\u00A0%%</string>
+    <string name="value_measurement">%1$s\u00A0%2$s</string>
+
+    <!-- Accessibilité -->
+    <string name="a11y_tile_description">%1$s, %2$s</string>
+
+    <!-- Navigation -->
+    <string name="nav_home">Maison</string>
+    <string name="nav_rooms">Pièces</string>
+    <string name="nav_settings">Réglages</string>
+
+    <!-- Mise en page (add-on HomeGlass Server) -->
+    <string name="layout_loading">Chargement de la mise en page…</string>
+    <string name="layout_issue_cached">Mise en page en cache</string>
+    <string name="layout_issue_offline">Hors ligne — dernière mise en page connue</string>
+    <string name="layout_issue_update_app">Mettez à jour l\'application</string>
+    <string name="layout_issue_corrupted">Mise en page illisible — dernière version affichée</string>
+    <string name="layout_issue_no_data">Aucune mise en page disponible</string>
+    <string name="action_retry">Réessayer</string>
+    <string name="a11y_scene_card">%1$s, scène</string>
+
+    <!-- Chips de synthèse de l\'écran Maison -->
+    <string name="chip_lights">Lumières</string>
+    <string name="chip_climate">Climat</string>
+    <string name="chip_security">Sécurité</string>
+    <string name="chip_media">Médias</string>
+    <string name="chip_energy">Énergie</string>
+
+    <!-- Connexion à Home Assistant -->
+    <string name="welcome_title">Bienvenue</string>
+    <string name="welcome_subtitle">Connectez HomeGlass à votre Home Assistant.</string>
+    <string name="welcome_searching">Recherche de votre maison…</string>
+    <string name="welcome_found_many">%1$d instances trouvées</string>
+    <string name="welcome_none_found">Aucune instance détectée sur ce réseau.</string>
+    <string name="welcome_manual">Saisir l\'adresse manuellement</string>
+    <string name="welcome_manual_hint">http://homeassistant.local:8123</string>
+    <string name="welcome_manual_invalid">Adresse invalide ou non joignable.</string>
+    <string name="welcome_manual_cleartext">HTTP en clair refusé pour une adresse publique.</string>
+    <string name="welcome_continue">Continuer</string>
+    <string name="welcome_retry_search">Relancer la recherche</string>
+    <string name="welcome_back">Revenir aux instances</string>
+
+    <string name="auth_token_explainer">Créez un jeton d\'accès longue durée dans Home Assistant : Profil → Sécurité → Jetons d\'accès longue durée → Créer un jeton.</string>
+    <string name="auth_token_label">Jeton d\'accès</string>
+    <string name="auth_token_hint">Collez le jeton ici</string>
+    <string name="auth_token_submit">Se connecter</string>
+    <string name="auth_busy">Connexion…</string>
+    <string name="auth_token_invalid">Jeton refusé par Home Assistant.</string>
+    <string name="auth_oauth">Se connecter avec Home Assistant (OAuth)</string>
+    <string name="auth_oauth_unavailable">OAuth indisponible : renseignez client_id et redirect_uri dans gradle.properties (voir README).</string>
+    <string name="auth_error_unreachable">Instance injoignable.</string>
+    <string name="auth_session_expired">Session de l\'appareil expirée : relancez l\'appairage (le code s\'affiche dans Home Assistant, panneau HomeGlass).</string>
+
+    <!-- Écran Pièces -->
+    <string name="rooms_title">Pièces</string>
+    <string name="rooms_empty">Aucune pièce configurée dans Home Assistant.</string>
+
+    <!-- Sections générées depuis Home Assistant -->
+    <string name="section_scenes">Scènes</string>
+    <string name="section_lights">Lumières</string>
+    <string name="section_climate">Climat</string>
+    <string name="section_security">Sécurité</string>
+    <string name="section_covers">Volets</string>
+    <string name="section_media">Médias</string>
+    <string name="section_cameras">Caméras</string>
+    <string name="section_switches">Prises</string>
+    <string name="section_sensors">Capteurs</string>
+    <string name="section_cleaning">Nettoyage</string>
+    <string name="section_other">Autres</string>
+
+    <!-- Réglages -->
+    <string name="settings_title">Réglages</string>
+    <string name="settings_instance">Instance</string>
+    <string name="settings_url">Adresse utilisée</string>
+    <string name="settings_version">Version de Home Assistant</string>
+    <string name="settings_status">État de la connexion</string>
+    <string name="settings_status_connected">Connecté</string>
+    <string name="settings_status_connecting">Connexion…</string>
+    <string name="settings_status_reconnecting">Reconnexion…</string>
+    <string name="settings_status_failed">Hors ligne</string>
+    <string name="settings_status_idle">Inactif</string>
+    <string name="settings_disconnect">Se déconnecter</string>
+    <string name="settings_reconnect">Reconnecter</string>
+    <string name="settings_customize">Personnaliser l\'accueil</string>
+    <string name="settings_presence_title">Réveil au passage</string>
+    <string name="settings_presence_description">Rallume l\'écran dès qu\'une personne s\'approche. Automatique combine le capteur de proximité et la caméra.</string>
+    <string name="settings_presence_unavailable">Ni capteur de proximité ni caméra frontale sur cet appareil.</string>
+    <string name="settings_presence_denied">Autorisation caméra refusée : le réveil reste désactivé.</string>
+    <string name="settings_presence_distance">Distance de détection</string>
+    <string name="settings_presence_distance_value">%1$d\u00A0cm</string>
+    <string name="settings_presence_cooldown">Anti-rebond</string>
+    <string name="settings_presence_cooldown_value">%1$d\u00A0s</string>
+    <string name="settings_presence_source">Déclencheur</string>
+    <string name="settings_presence_source_auto">Automatique</string>
+    <string name="settings_presence_binary_hint">Selon le capteur, la distance peut n’être que « proche / loin » : en Automatique, la caméra détecte les personnes à distance.</string>
+    <string name="settings_presence_source_proximity">Capteur</string>
+    <string name="settings_presence_source_camera">Caméra</string>
+    <string name="settings_presence_log">Journal de présence</string>
+    <string name="settings_presence_log_empty">Aucun passage enregistré.</string>
+    <string name="settings_presence_log_clear">Vider</string>
+    <string name="settings_theme_description">Mode affichage</string>
+    <string name="settings_theme">Thème</string>
+    <string name="settings_theme_auto">Auto (suivi système)</string>
+    <string name="settings_theme_light">Clair</string>
+    <string name="settings_theme_sombre">Sombre</string>
+    <string name="presence_log_started">Surveillance démarrée</string>
+    <string name="presence_channel_name">Détection de présence</string>
+    <string name="presence_notification_active">Surveillance de présence active</string>
+
+    <!-- Tableau de bord personnel -->
+    <string name="customize_title">Personnaliser l\'accueil</string>
+    <string name="customize_subtitle">Créez des zones nommées et glissez les cartes pour les réorganiser.</string>
+    <string name="customize_search_hint">Rechercher un appareil</string>
+    <string name="customize_selected">Affichés (%1$d)</string>
+    <string name="customize_available">Autres appareils</string>
+    <string name="customize_save">Enregistrer</string>
+    <string name="customize_cancel">Annuler</string>
+    <string name="customize_reset">Tableau généré</string>
+    <string name="customize_move_up">Monter</string>
+    <string name="customize_move_down">Descendre</string>
+    <string name="customize_remove">Retirer</string>
+    <string name="customize_add">Ajouter</string>
+    <string name="customize_empty">Aucun appareil sélectionné : l\'accueil reste généré automatiquement.</string>
+    <string name="customize_zone_name_hint">Nom de la zone</string>
+    <string name="customize_zone_new">Nouvelle zone</string>
+    <string name="customize_zone_add">Ajouter une zone</string>
+    <string name="customize_zone_delete">Supprimer la zone</string>
+    <string name="customize_zone_up">Monter la zone</string>
+    <string name="customize_zone_down">Descendre la zone</string>
+    <string name="customize_zone_empty">Zone vide : ajoutez un appareil depuis la liste.</string>
+    <string name="customize_target">Ajout à : %1$s</string>
+    <string name="customize_target_none">première zone</string>
+    <string name="customize_drag">Glisser pour déplacer</string>
+
+    <!-- Erreurs de commande -->
+    <string name="error_command">Commande refusée par Home Assistant.</string>
+    <string name="error_network">Action impossible : pas de réseau.</string>
+    <string name="error_unauthorized">Session expirée. Reconnectez-vous.</string>
+    <string name="error_entity_missing">Entité introuvable.</string>
+
+    <!-- Panneau de contrôle d'un appareil -->
+    <string name="control_turn_on">Allumer</string>
+    <string name="control_turn_off">Éteindre</string>
+    <string name="control_brightness">Luminosité</string>
+    <string name="control_color_temperature">Température de couleur</string>
+    <string name="control_warm">Chaud</string>
+    <string name="control_cold">Froid</string>
+    <string name="control_color">Couleur</string>
+    <string name="control_color_wheel">Roue de couleurs : touchez ou faites glisser pour choisir la teinte</string>
+
+    <!-- Enceintes (media_player) -->
+    <string name="home_edit">Modifier</string>
+    <string name="media_title_artist">%1$s · %2$s</string>
+    <string name="media_artist_album">%1$s · %2$s</string>
+    <string name="control_play">Lecture</string>
+    <string name="control_pause">Pause</string>
+    <string name="control_next">Piste suivante</string>
+    <string name="control_previous">Piste précédente</string>
+    <string name="control_volume">Volume</string>
+
+    <!-- Lecteur plein écran (vinyle) -->
+    <string name="player_close">Fermer le lecteur</string>
+    <string name="player_cover">Pochette de l\'album sur le vinyle</string>
+
+    <!-- Catalogue de design system (écran temporaire de développement) -->
+    <string name="showcase_title">Design system</string>
+    <string name="showcase_subtitle">Catalogue des composants HomeGlass</string>
+    <string name="showcase_section_tiles">Tuiles</string>
+    <string name="showcase_section_typography">Typographie</string>
+    <string name="showcase_light_on">Lumière allumée</string>
+    <string name="showcase_light_off">Lumière éteinte</string>
+    <string name="showcase_light_unavailable">Indisponible</string>
+    <string name="showcase_typography_large_title">Grand titre 34</string>
+    <string name="showcase_typography_section">Titre de section 22</string>
+    <string name="showcase_label_name">Nom de tuile — 15 SemiBold</string>
+    <string name="showcase_label_status">Statut — 13 Regular</string>
+    <string name="showcase_label_caption">Légende — 12 Medium</string>
+
+    <!-- Appairage avec HomeGlass Server -->
+    <string name="welcome_pair_title">Appairer HomeGlass</string>
+    <string name="welcome_pair_subtitle">Aucun jeton à copier : un code à six chiffres s\'affiche dans Home Assistant.</string>
+    <string name="welcome_server_row">HomeGlass Server v%1$s</string>
+    <string name="welcome_servers_none">Aucun HomeGlass Server trouvé sur le réseau.</string>
+    <string name="welcome_server_manual">Saisir l\'adresse du serveur</string>
+    <string name="welcome_server_manual_hint">http://192.168.1.20:8765</string>
+    <string name="welcome_direct_title">Connexion directe à Home Assistant</string>
+    <string name="pair_code_title">Code d\'appairage</string>
+    <string name="pair_code_explainer">Ouvrez Home Assistant → HomeGlass : le code à %1$d chiffres y est affiché. Recopiez-le ici pour appairer cet appareil.</string>
+    <string name="pair_code_hint">123456</string>
+    <string name="pair_code_submit">S\'appairer</string>
+    <string name="pair_code_waiting">Le code s\'affiche dans Home Assistant, panneau HomeGlass.</string>
+    <string name="pair_code_invalid">Code incorrect : vérifiez les chiffres affichés dans Home Assistant.</string>
+    <string name="pair_code_expired">Ce code a expiré. Relancez l\'appairage.</string>
+    <string name="pair_code_too_many">Trop de tentatives. Relancez l\'appairage.</string>
+    <string name="pair_server_unreachable">HomeGlass Server injoignable.</string>
+    <string name="pair_not_server">Cette adresse ne répond pas comme un HomeGlass Server.</string>
+</resources>

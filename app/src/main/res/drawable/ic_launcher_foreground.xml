@@ -1,0 +1,17 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+
+    <!-- Silhouette de maison, centrée dans la zone sûre de l\'icône adaptative. -->
+    <path
+        android:fillAlpha="0.92"
+        android:fillColor="#FFFFFF"
+        android:pathData="M54,28.5 L79,49.9 C80,50.8 79.4,52.3 78,52.3 L74.5,52.3 L74.5,71.5 C74.5,73.7 72.7,75.5 70.5,75.5 L37.5,75.5 C35.3,75.5 33.5,73.7 33.5,71.5 L33.5,52.3 L30,52.3 C28.6,52.3 28,50.8 29,49.9 Z" />
+
+    <!-- Pastille de verre colorée. -->
+    <path
+        android:fillColor="#FF9500"
+        android:pathData="M54,60.5 m-9,0 a9,9 0 1,0 18,0 a9,9 0 1,0 -18,0" />
+</vector>
