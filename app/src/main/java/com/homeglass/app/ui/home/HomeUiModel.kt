@@ -23,6 +23,8 @@ data class HomeSectionUi(
     val kind: HomeSectionKind,
     val tiles: List<TileUiModel> = emptyList(),
     val scenes: List<SceneCardUi> = emptyList(),
+    /** Vrai pour la grille libre : positions et portées explicites, sans reflow automatique. */
+    val freeform: Boolean = false,
 )
 
 enum class HomeSectionKind { Tiles, Scenes }

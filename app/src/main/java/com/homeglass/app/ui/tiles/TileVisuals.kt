@@ -4,15 +4,19 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ShowChart
 import androidx.compose.material.icons.rounded.AutoAwesome
 import androidx.compose.material.icons.rounded.Blinds
+import androidx.compose.material.icons.rounded.CalendarMonth
 import androidx.compose.material.icons.rounded.CameraAlt
 import androidx.compose.material.icons.rounded.CleaningServices
 import androidx.compose.material.icons.rounded.DevicesOther
 import androidx.compose.material.icons.rounded.Lightbulb
+import androidx.compose.material.icons.rounded.Image
 import androidx.compose.material.icons.rounded.Lock
 import androidx.compose.material.icons.rounded.PowerSettingsNew
+import androidx.compose.material.icons.rounded.Schedule
 import androidx.compose.material.icons.rounded.Shield
 import androidx.compose.material.icons.rounded.Speaker
 import androidx.compose.material.icons.rounded.Thermostat
+import androidx.compose.material.icons.rounded.Title
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import com.homeglass.app.ui.theme.GlassColors
@@ -33,6 +37,10 @@ object TileVisuals {
         TileCategory.Vacuum -> Icons.Rounded.CleaningServices
         TileCategory.Scene -> Icons.Rounded.AutoAwesome
         TileCategory.Generic -> Icons.Rounded.DevicesOther
+        TileCategory.Clock -> Icons.Rounded.Schedule
+        TileCategory.Photo -> Icons.Rounded.Image
+        TileCategory.Calendar -> Icons.Rounded.CalendarMonth
+        TileCategory.Title -> Icons.Rounded.Title
     }
 
     /**
@@ -52,5 +60,9 @@ object TileVisuals {
         TileCategory.Vacuum -> colors.categorySwitch
         TileCategory.Scene -> colors.accent
         TileCategory.Generic -> colors.categoryGeneric
+        TileCategory.Clock -> colors.accent
+        TileCategory.Photo -> colors.categoryCool
+        TileCategory.Calendar -> colors.accent
+        TileCategory.Title -> colors.accent
     }
 }

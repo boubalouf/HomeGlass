@@ -52,10 +52,11 @@ import com.homeglass.app.ui.home.HomeScreen
 import com.homeglass.app.ui.home.HomeSectionKind
 import com.homeglass.app.ui.home.RoomUi
 import com.homeglass.app.ui.home.SceneCardUi
+import com.homeglass.app.ui.home.allEntityTiles
 import com.homeglass.app.ui.home.toHomeUiWithStates
 import com.homeglass.app.ui.home.toRoomsUi
 import com.homeglass.app.ui.home.toThemeConfig
-import com.homeglass.app.ui.home.withCustomSections
+import com.homeglass.app.ui.home.withCustomLayout
 import com.homeglass.app.ui.media.NowPlayingScreen
 import com.homeglass.app.ui.media.startedPlayback
 import com.homeglass.app.ui.media.staysOnScreen
@@ -67,6 +68,8 @@ import com.homeglass.app.ui.theme.GlassTheme
 import com.homeglass.app.ui.theme.HomeGlassTheme
 import com.homeglass.app.ui.theme.ThemeConfig
 import com.homeglass.app.ui.tiles.LocalMediaArtworkBaseUrl
+import com.homeglass.app.ui.tiles.LocalMediaControls
+import com.homeglass.app.ui.tiles.MediaControlHandlers
 import com.homeglass.app.ui.tiles.TileAction
 import com.homeglass.app.ui.tiles.TileCategory
 import com.homeglass.app.ui.tiles.TileUiModel
@@ -105,6 +108,9 @@ fun HomeGlassApp(
     val customStore = remember { CustomDashboardStore(context.applicationContext) }
     val customDashboard by customStore.dashboard.collectAsState(initial = CustomDashboard())
     var showCustomizer by remember { mutableStateOf(false) }
+    // Instantané pris à l'ouverture de l'éditeur : les mises à jour d'état Home Assistant
+    // ne doivent pas réinitialiser le canevas en cours de modification.
+    var editorSeed by remember { mutableStateOf<List<TileUiModel>>(emptyList()) }
     val customScope = rememberCoroutineScope()
 
     // Pochette d'album : Home Assistant la publie sous forme de chemin relatif. L'URL interne
@@ -113,16 +119,22 @@ fun HomeGlassApp(
         instance.internalUrl?.takeIf(String::isNotBlank) ?: instance.baseUrl
     }
 
-    // Entités qui savent s'afficher en tuile (accueil + pièces) : c'est la liste proposée
-    // par l'éditeur de tableau de bord.
-    val availableTileIds = (
-        layout?.toHomeUiWithStates(states)?.sections.orEmpty() +
-            layout?.toRoomsUi(states).orEmpty().flatMap { room -> room.sections }
-        )
+    // Modèle de l'accueil tel qu'affiché, et appareils proposés par l'éditeur : les tuiles
+    // d'entités de l'accueil et des pièces. Une entité n'apparaît qu'une fois dans la palette.
+    val roomsUi = layout?.toRoomsUi(states).orEmpty()
+    val roomTiles = roomsUi.flatMap { room -> room.sections }
         .filter { section -> section.kind == HomeSectionKind.Tiles }
         .flatMap { section -> section.tiles }
-        .mapNotNull { tile -> tile.entityId }
-        .toSet()
+    val baseHome = layout?.toHomeUiWithStates(states)
+    val homeModel = baseHome?.withCustomLayout(customDashboard, roomTiles)
+    val editorTiles = homeModel?.sections.orEmpty()
+        .filter { section -> section.kind == HomeSectionKind.Tiles }
+        .flatMap { section -> section.tiles }
+    // Noms d'origine Home Assistant : la palette ne doit pas contenir les renommages, sinon
+    // l'éditeur croit que le nom affiché est celui d'origine et efface l'étiquette au
+    // enregistrement (les pseudos disparaissaient).
+    val availableTiles = (baseHome?.allEntityTiles().orEmpty() + roomTiles)
+        .distinctBy { tile -> tile.entityId ?: tile.id }
 
     LaunchedEffect(redirect) {
         if (redirect != null) {
@@ -132,7 +144,14 @@ fun HomeGlassApp(
     }
 
     HomeGlassTheme(config = themeConfig) {
-        CompositionLocalProvider(LocalMediaArtworkBaseUrl provides artworkBaseUrl) {
+        CompositionLocalProvider(
+            LocalMediaArtworkBaseUrl provides artworkBaseUrl,
+            LocalMediaControls provides MediaControlHandlers(
+                playPause = controller::mediaPlayPause,
+                next = controller::mediaNext,
+                previous = controller::mediaPrevious,
+            ),
+        ) {
             val currentSession = session
             if (currentSession == null) {
                 Box(Modifier.fillMaxSize()) {
@@ -154,16 +173,22 @@ fun HomeGlassApp(
                     commandError = commandError,
                     onDismissError = controller::clearError,
                     customDashboard = customDashboard,
-                    onCustomize = { showCustomizer = true },
+                    onCustomize = {
+                        // Sans layout chargé, l'éditeur n'aurait rien à montrer : on évite
+                        // d'ouvrir un canevas vide qu'un enregistrement viderait le tableau.
+                        if (editorTiles.isNotEmpty()) {
+                            editorSeed = editorTiles
+                            showCustomizer = true
+                        }
+                    },
                 )
 
                 if (showCustomizer) {
                     CustomDashboardScreen(
-                        states = states,
-                        availableEntityIds = availableTileIds,
-                        dashboard = customDashboard,
-                        onSave = { dashboard ->
-                            customScope.launch { customStore.save(dashboard) }
+                        initialTiles = editorSeed,
+                        availableTiles = availableTiles,
+                        onSave = { tiles ->
+                            customScope.launch { customStore.save(CustomDashboard(tiles = tiles)) }
                             showCustomizer = false
                         },
                         onDismiss = { showCustomizer = false },
@@ -194,7 +219,7 @@ private fun MainShell(
         .flatMap { room -> room.sections }
         .filter { section -> section.kind == HomeSectionKind.Tiles }
         .flatMap { section -> section.tiles }
-    val home = layout?.toHomeUiWithStates(states)?.withCustomSections(customDashboard, roomTiles)
+    val home = layout?.toHomeUiWithStates(states)?.withCustomLayout(customDashboard, roomTiles)
     val tabs: List<NavTabUi> = home?.tabs.orEmpty()
 
     var selectedTabId by rememberSaveable { mutableStateOf<String?>(null) }

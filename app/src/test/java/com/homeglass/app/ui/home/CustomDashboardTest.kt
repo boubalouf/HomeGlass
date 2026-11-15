@@ -1,10 +1,14 @@
 package com.homeglass.app.ui.home
 
 import com.homeglass.app.domain.dashboard.CustomDashboard
-import com.homeglass.app.domain.dashboard.CustomSection
+import com.homeglass.app.domain.dashboard.PlacedTile
+import com.homeglass.app.domain.dashboard.WidgetItem
+import com.homeglass.app.domain.dashboard.WidgetKind
 import com.homeglass.app.ui.tiles.TileCategory
 import com.homeglass.app.ui.tiles.TileUiModel
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class CustomDashboardTest {
@@ -25,8 +29,6 @@ class CustomDashboardTest {
         tabs = emptyList(),
     )
 
-    private fun dashboard(vararg sections: CustomSection) = CustomDashboard(sections.toList())
-
     @Test
     fun `empty dashboard keeps the generated dashboard`() {
         val model = home(
@@ -35,58 +37,131 @@ class CustomDashboardTest {
             ),
         )
 
-        assertEquals(model, model.withCustomSections(CustomDashboard()))
+        assertEquals(model, model.withCustomLayout(CustomDashboard()))
     }
 
     @Test
-    fun `zones filter order and title the tiles but keep scenes`() {
-        val scenes = HomeSectionUi("scenes", "Scènes", HomeSectionKind.Scenes)
+    fun `placed tiles build a freeform section with their geometry`() {
         val model = home(
             listOf(
-                HomeSectionUi(
-                    "a",
-                    "Lumières",
-                    HomeSectionKind.Tiles,
-                    tiles = listOf(tile("light.a"), tile("light.b"), tile("light.c")),
+                HomeSectionUi("a", "Lumières", HomeSectionKind.Tiles, tiles = listOf(tile("light.a"), tile("light.b"))),
+            ),
+        )
+
+        val customized = model.withCustomLayout(
+            CustomDashboard(
+                tiles = listOf(
+                    PlacedTile(id = "tile_light.b", entityId = "light.b", col = 2, row = 1, spanX = 2, spanY = 1),
+                    PlacedTile(id = "tile_light.a", entityId = "light.a", col = 0, row = 0),
                 ),
-                scenes,
             ),
         )
 
-        val customized = model.withCustomSections(
-            dashboard(
-                CustomSection(id = "zone_salon", title = "Salon", entityIds = listOf("light.c", "light.a")),
-                CustomSection(id = "zone_cuisine", title = "Cuisine", entityIds = listOf("light.b")),
-            ),
-        )
-
-        assertEquals(3, customized.sections.size)
-        assertEquals(listOf("Salon", "Cuisine"), customized.sections.dropLast(1).map { it.title })
-        assertEquals(
-            listOf("light.c", "light.a"),
-            customized.sections.first().tiles.map { it.entityId },
-        )
-        assertEquals(listOf("light.b"), customized.sections[1].tiles.map { it.entityId })
-        assertEquals(HomeSectionKind.Scenes, customized.sections.last().kind)
+        val section = customized.sections.single()
+        assertTrue(section.freeform)
+        // La grille place les cases par rangée puis colonne.
+        assertEquals(listOf("light.a", "light.b"), section.tiles.map { it.entityId })
+        val moved = section.tiles.first { it.entityId == "light.b" }
+        assertEquals(2, moved.gridCol)
+        assertEquals(1, moved.gridRow)
+        assertEquals(2, moved.spanX)
     }
 
     @Test
-    fun `tiles from the rooms fill the gap`() {
+    fun `widgets are placed on the same freeform grid`() {
         val model = home(
             listOf(
                 HomeSectionUi("a", "", HomeSectionKind.Tiles, tiles = listOf(tile("light.a"))),
             ),
         )
 
-        val customized = model.withCustomSections(
-            dashboard(CustomSection(id = "zone", entityIds = listOf("light.room"))),
-            extraTiles = listOf(tile("light.room")),
+        val customized = model.withCustomLayout(
+            CustomDashboard(
+                tiles = listOf(
+                    PlacedTile(
+                        id = "w1",
+                        widget = WidgetItem("w1", WidgetKind.Clock, WidgetKind.CLOCK_MINIMAL),
+                        col = 0,
+                        row = 0,
+                        spanX = 2,
+                        spanY = 2,
+                    ),
+                ),
+            ),
         )
 
-        assertEquals(
-            listOf("light.room"),
-            customized.sections.first().tiles.map { it.entityId },
+        val widgetTile = customized.sections.single().tiles.single()
+        assertEquals(TileCategory.Clock, widgetTile.category)
+        assertEquals(WidgetKind.CLOCK_MINIMAL, widgetTile.widgetTheme)
+        assertEquals(2, widgetTile.spanX)
+        assertEquals(2, widgetTile.spanY)
+    }
+
+    @Test
+    fun `custom label overrides the entity name`() {
+        val model = home(
+            listOf(
+                HomeSectionUi("a", "", HomeSectionKind.Tiles, tiles = listOf(tile("light.a"))),
+            ),
         )
+
+        val customized = model.withCustomLayout(
+            CustomDashboard(
+                tiles = listOf(
+                    PlacedTile(id = "tile_light.a", entityId = "light.a", label = "Lampe canapé"),
+                ),
+            ),
+        )
+
+        assertEquals("Lampe canapé", customized.sections.single().tiles.single().name)
+    }
+
+    @Test
+    fun `stored label keeps only real renames`() {
+        assertEquals("Enceinte salon", storedLabel("Enceinte salon", "Chambre speaker"))
+        assertNull(storedLabel("Chambre speaker", "Chambre speaker"))
+        assertNull(storedLabel("   ", "Chambre speaker"))
+    }
+
+    @Test
+    fun `title widgets are dropped from existing dashboards`() {
+        val model = home(
+            listOf(
+                HomeSectionUi("a", "", HomeSectionKind.Tiles, tiles = listOf(tile("light.a"))),
+            ),
+        )
+
+        val customized = model.withCustomLayout(
+            CustomDashboard(
+                tiles = listOf(
+                    PlacedTile(
+                        id = "w1",
+                        widget = WidgetItem(id = "w1", kind = WidgetKind.Title, text = "Salon"),
+                    ),
+                ),
+            ),
+        )
+
+        // Plus aucune case texte : l'accueil généré reprend la main.
+        assertEquals(model.sections, customized.sections)
+    }
+
+    @Test
+    fun `scenes are kept after the custom grid`() {
+        val scenes = HomeSectionUi("scenes", "Scènes", HomeSectionKind.Scenes)
+        val model = home(
+            listOf(
+                HomeSectionUi("a", "", HomeSectionKind.Tiles, tiles = listOf(tile("light.a"))),
+                scenes,
+            ),
+        )
+
+        val customized = model.withCustomLayout(
+            CustomDashboard(tiles = listOf(PlacedTile(id = "tile_light.a", entityId = "light.a"))),
+        )
+
+        assertEquals(2, customized.sections.size)
+        assertEquals(HomeSectionKind.Scenes, customized.sections.last().kind)
     }
 
     @Test
@@ -97,8 +172,8 @@ class CustomDashboardTest {
             ),
         )
 
-        val customized = model.withCustomSections(
-            dashboard(CustomSection(id = "zone", entityIds = listOf("light.disparue"))),
+        val customized = model.withCustomLayout(
+            CustomDashboard(tiles = listOf(PlacedTile(id = "x", entityId = "light.disparue"))),
         )
 
         assertEquals(model, customized)

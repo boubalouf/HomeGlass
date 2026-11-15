@@ -4,6 +4,7 @@ import androidx.annotation.StringRes
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
@@ -32,6 +33,8 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
@@ -87,6 +90,21 @@ fun GlassBottomNavBar(
             )
             .heightIn(min = dimens.navBarHeight)
             .glassHazePanel(shape = shapes.navBar, tint = colors.navBarBackground)
+            // Bord lumineux : c'est lui qui rend le verre lisible même sur un fond peu contrasté.
+            .border(
+                width = 1.dp,
+                color = if (colors.isDark) Color.White.copy(alpha = 0.18f) else Color.White.copy(alpha = 0.65f),
+                shape = shapes.navBar,
+            )
+            // Reflet supérieur, comme une vitre éclairée par le haut.
+            .background(
+                Brush.verticalGradient(
+                    listOf(
+                        Color.White.copy(alpha = if (colors.isDark) 0.12f else 0.30f),
+                        Color.Transparent,
+                    ),
+                ),
+            )
             .padding(horizontal = 8.dp, vertical = 8.dp),
         horizontalArrangement = Arrangement.spacedBy(4.dp),
         verticalAlignment = Alignment.CenterVertically,

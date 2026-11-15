@@ -1,11 +1,26 @@
 package com.homeglass.app.ui.tiles
 
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.homeglass.app.ui.theme.GlassTheme
 
 /**
@@ -53,6 +68,67 @@ fun SensorTile(
                     overflow = TextOverflow.Ellipsis,
                 )
             }
+        },
+        // Grande case : valeur en très grand, libellé dessous, et une pastille d'icône
+        // décorative à droite pour occuper l'espace sans le laisser vide.
+        largeContent = {
+            val accent = GlassTheme.colors.categorySensor
+            Row(
+                modifier = Modifier.fillMaxSize(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(16.dp),
+            ) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = model.stateText,
+                        style = typography.sensorValue.copy(fontSize = 46.sp, lineHeight = 50.sp),
+                        color = valueColor,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                    Spacer(Modifier.height(6.dp))
+                    Text(
+                        text = model.name,
+                        style = typography.tileStatus,
+                        color = nameColor,
+                        maxLines = 2,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                }
+                Box(
+                    modifier = Modifier
+                        .size(88.dp)
+                        .clip(CircleShape)
+                        .background(accent.copy(alpha = 0.14f)),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Icon(
+                        imageVector = TileVisuals.icon(TileCategory.Sensor),
+                        contentDescription = null,
+                        tint = accent,
+                        modifier = Modifier.size(42.dp),
+                    )
+                }
+            }
+        },
+        // Case large : valeur et libellé côte à côte au lieu d'être empilés.
+        wideContent = {
+            Text(
+                text = model.stateText,
+                style = typography.sensorValue,
+                color = valueColor,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+            Spacer(Modifier.width(12.dp))
+            Text(
+                text = model.name,
+                style = typography.tileStatus,
+                color = nameColor,
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.weight(1f),
+            )
         },
         // La valeur est déjà une icône parlante : sans pictogramme, le nom sous la valeur
         // dispose de toute la hauteur de la tuile et n'est plus rogné.

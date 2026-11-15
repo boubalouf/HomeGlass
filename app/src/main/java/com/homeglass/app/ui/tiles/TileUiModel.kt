@@ -31,6 +31,12 @@ enum class TileCategory {
     Vacuum,
     Scene,
     Generic,
+
+    /** Cases décoratives locales, sans entité Home Assistant. */
+    Clock,
+    Photo,
+    Calendar,
+    Title,
 }
 
 /** Mode de présentation demandé par la configuration de la tuile. */
@@ -84,4 +90,19 @@ data class TileUiModel(
     val entityId: String? = null,
     /** Piste en cours, pour une enceinte (`null` pour les autres domaines). */
     val media: MediaInfo? = null,
-)
+    /** Thème de la case décorative (`Clock`, `Photo`, `Calendar`), `null` sinon. */
+    val widgetTheme: String? = null,
+    /** Portée sur la grille libre, en cellules (1 = une cellule). */
+    val spanX: Int = 1,
+    val spanY: Int = 1,
+    /** Position explicite sur la grille libre (`null` pour un placement automatique). */
+    val gridCol: Int? = null,
+    val gridRow: Int? = null,
+) {
+    /** Vrai pour une case décorative locale, sans entité Home Assistant. */
+    val isWidget: Boolean
+        get() = category == TileCategory.Clock ||
+            category == TileCategory.Photo ||
+            category == TileCategory.Calendar ||
+            category == TileCategory.Title
+}

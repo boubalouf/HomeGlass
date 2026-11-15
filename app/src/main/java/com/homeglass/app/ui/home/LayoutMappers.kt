@@ -35,7 +35,10 @@ private val FallbackGradient = listOf(GlassPalette.AccentOrange, Color(0xFFFF375
 fun Layout.toHomeUi(): HomeUiModel = HomeUiModel(
     title = home.title.ifBlank { "Maison" },
     revision = revision,
-    chips = home.summaryChips.mapNotNull { chip -> summaryChips[chip] },
+    // Les chips de synthèse (lumières, climat, sécurité, médias) sont retirées de l'accueil :
+    // seules les catégories encore utiles (énergie) resteraient visibles.
+    chips = home.summaryChips.mapNotNull { chip -> summaryChips[chip] }
+        .filterNot { chip -> chip in removedSummaryChips },
     sections = home.sections.map(Section::toUi).filter { it.tiles.isNotEmpty() || it.scenes.isNotEmpty() },
     tabs = tabs.filter { it.enabled }.map { tab ->
         NavTabUi(
@@ -70,18 +73,24 @@ fun Section.toUi(): HomeSectionUi {
 }
 
 /** Tuile du contrat vers modèle de tuile existant. */
-fun TileItem.toUi(): TileUiModel = TileUiModel(
-    id = id.ifBlank { entityId },
-    name = name.ifBlank { entityId },
-    stateText = "",
-    category = categoryFor(entityId),
-    size = size.toUi(),
-    tint = parseHexColor(accent),
-    display = display.toUi(),
-    tap = tap.toUiAction(TileAction.None),
-    longPress = longPress.toUiAction(TileAction.MoreInfo),
-    entityId = entityId.ifBlank { null },
-)
+fun TileItem.toUi(): TileUiModel {
+    val uiSize = size.toUi()
+    return TileUiModel(
+        id = id.ifBlank { entityId },
+        name = name.ifBlank { entityId },
+        stateText = "",
+        category = categoryFor(entityId),
+        size = uiSize,
+        tint = parseHexColor(accent),
+        display = display.toUi(),
+        tap = tap.toUiAction(TileAction.None),
+        longPress = longPress.toUiAction(TileAction.MoreInfo),
+        entityId = entityId.ifBlank { null },
+        // La grille libre reprend la taille déclarée par le contrat : 1×1, 2×1 ou 2×2.
+        spanX = if (uiSize == UiTileSize.Small) 1 else 2,
+        spanY = if (uiSize == UiTileSize.Large) 2 else 1,
+    )
+}
 
 /** Carte de scène du contrat vers modèle d'affichage. */
 fun SceneItem.toUi(): SceneCardUi = SceneCardUi(
@@ -180,6 +189,14 @@ private fun LayoutAction?.toUiAction(fallback: TileAction): TileAction = when (t
     ActionType.Navigate -> roomId?.let(TileAction::Navigate) ?: fallback
     ActionType.None, null -> fallback
 }
+
+/** Chips retirées de l'accueil à la demande du design. */
+private val removedSummaryChips = setOf(
+    SummaryChipUi.Lights,
+    SummaryChipUi.Climate,
+    SummaryChipUi.Security,
+    SummaryChipUi.Media,
+)
 
 /** Clés du contrat → chips d'affichage. Une clé inconnue est ignorée. */
 private val summaryChips: Map<String, SummaryChipUi> = mapOf(

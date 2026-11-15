@@ -4,40 +4,51 @@ import com.homeglass.app.domain.dashboard.CustomDashboard
 import com.homeglass.app.ui.tiles.TileUiModel
 
 /**
- * Applique les zones personnalisées à l'accueil : chaque zone devient une section titrée,
- * dans l'ordre et avec les appareils choisis.
+ * Applique le tableau de bord personnel à l'accueil.
  *
- * Les tuiles absentes de la sélection sont retirées (elles restent dans les pièces), et les
- * identifiants inconnus du layout courant sont ignorés : après une modification côté Home
- * Assistant, l'écran continue de s'afficher au lieu de se vider.
- *
- * Un tableau vide rend la main au tableau généré automatiquement.
+ * Les cases enregistrées remplacent les sections d'appareils générées et forment une seule
+ * grille libre (placements et tailles explicites) ; les scènes restent affichées dessous.
+ * Les cases dont l'entité a disparu du layout courant sont ignorées : après une modification
+ * côté Home Assistant, l'écran continue de s'afficher au lieu de se vider. Un tableau vide
+ * rend la main au tableau généré automatiquement.
  */
-fun HomeUiModel.withCustomSections(
+fun HomeUiModel.withCustomLayout(
     dashboard: CustomDashboard,
     extraTiles: List<TileUiModel> = emptyList(),
 ): HomeUiModel {
-    if (!dashboard.isConfigured) return this
+    val cleaned = dashboard.normalized()
+    if (cleaned.tiles.isEmpty()) return this
 
-    val tiles = (sections.filter { it.kind == HomeSectionKind.Tiles }.flatMap { it.tiles } + extraTiles)
+    val byEntity = (sections.filter { it.kind == HomeSectionKind.Tiles }.flatMap { it.tiles } + extraTiles)
         .mapNotNull { tile -> tile.entityId?.let { id -> id to tile } }
         .toMap()
 
-    val custom = dashboard.normalized().sections.mapNotNull { section ->
-        val chosen = section.entityIds.mapNotNull(tiles::get)
-        if (chosen.isEmpty()) {
-            null
+    val tiles = cleaned.tiles.mapNotNull { placed ->
+        val widget = placed.widget
+        if (widget != null) {
+            widget.toTileUiModel(placed)
         } else {
-            HomeSectionUi(
-                id = "custom_${section.id}",
-                title = section.title,
-                kind = HomeSectionKind.Tiles,
-                tiles = chosen,
-            )
+            byEntity[placed.entityId]?.withPlacement(placed)?.let { tile ->
+                // Un nom personnalisé remplace celui publié par Home Assistant.
+                placed.label?.let { tile.copy(name = it) } ?: tile
+            }
         }
     }
-    if (custom.isEmpty()) return this
+    if (tiles.isEmpty()) return this
 
+    val custom = HomeSectionUi(
+        id = "custom_grid",
+        title = "",
+        kind = HomeSectionKind.Tiles,
+        tiles = tiles,
+        freeform = true,
+    )
     val scenes = sections.filter { it.kind == HomeSectionKind.Scenes }
-    return copy(sections = custom + scenes)
+    return copy(sections = listOf(custom) + scenes)
 }
+
+/** Toutes les tuiles d'entités de l'accueil, dans leur ordre d'affichage. */
+fun HomeUiModel.allEntityTiles(): List<TileUiModel> =
+    sections.filter { it.kind == HomeSectionKind.Tiles }
+        .flatMap { it.tiles }
+        .filterNot { it.isWidget }

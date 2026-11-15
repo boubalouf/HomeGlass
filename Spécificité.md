@@ -104,10 +104,11 @@ com.homeglass.app
 │   ├── AppRoot.kt             coquille, onglets, feuilles, toast, lecteur
 │   ├── components/            GlassSurface, GlassBackground, GlassHaze, DeviceShell, StaggeredAppearance
 │   ├── navigation/            GlassBottomNavBar, NavTab
-│   ├── home/                  Maison (modèle, écran, mapping des états, tableau personnel)
+│   ├── home/                  Maison (modèle, écran, mapping des états, placement, widgets)
 │   ├── rooms/                 Pièces
 │   ├── settings/              Réglages
-│   ├── tiles/                 DeviceTile, LightTile, CoverTile, MediaTile, SensorTile, SceneTile…
+│   ├── tiles/                 FreeTileGrid, DeviceTile, LightTile, CoverTile, MediaTile,
+│   │                          SensorTile, ClockTile, PhotoTile, CalendarTile, MediaControls…
 │   ├── media/                 lecteur plein écran et déclencheur « now playing »
 │   ├── detail/                MoreInfoSheet, ColorWheel
 │   ├── custom/                éditeur du tableau de bord personnel
@@ -118,7 +119,7 @@ com.homeglass.app
 │   ├── ha/                    EntityState, EntityPresentation, HaProtocol, BaseUrlChooser,
 │   │                          ExponentialBackoff, Registries, MediaInfo, PairingProtocol
 │   ├── layout/                Layout, LayoutItems, LayoutParser, LayoutGenerator, LayoutState
-│   ├── dashboard/             CustomDashboard
+│   ├── dashboard/             CustomDashboard, PlacedTile, DashboardLayout, Widget
 │   └── presence/              PresenceTuning, PresencePlanner, PresenceSource
 └── data/
     ├── ha/                    HaController, HaRealtime, HaHttpClient, HaAuthManager,
@@ -126,6 +127,7 @@ com.homeglass.app
     │                          HttpClientFactory, TileCommands, GeneratedLayoutSource
     ├── layout/                LayoutRepository, LayoutCache, LayoutSources
     ├── custom/                CustomDashboardStore
+    ├── widgets/               BingPhotoRepository (fonds photo du jour)
     └── presence/              PresenceService, PresenceStore
 ```
 
@@ -165,12 +167,12 @@ l'application ne peut pas se retrouver sur un écran inexistant.
 
 | Écran | Contenu |
 | --- | --- |
-| **Maison** | grand titre, chips de synthèse, sections de tuiles, cartes de scènes |
+| **Maison** | grand titre, grille libre personnalisée ou sections générées, cartes de scènes |
 | **Pièces** | une section par pièce (nom, icône, tuiles) |
 | **Réglages** | compte, statut de connexion, personnalisation, présence, à propos |
 | **Bienvenue** | découverte d'instances, jeton, OAuth, appairage add-on (`ui/welcome`) |
 | **Lecteur** | plein écran paysage, pochette, transport, volume (`ui/media`) |
-| **Tableau personnel** | zones titrées composées sur la tablette (`ui/custom`, `ui/home/CustomDashboard.kt`) |
+| **Tableau personnel** | grille libre : déplacement, redimensionnement, cases déco, renommage (`ui/custom`, `ui/home/CustomDashboard.kt`) |
 | **Showcase** | planche du design system (écran interne, `ui/showcase`) |
 
 ### Chips de synthèse
@@ -306,11 +308,23 @@ réagit au changement sans recréer l'activité.
 | 600 – 839 dp | 3 |
 | ≥ 840 dp | 4 |
 
-`TileGrid` n'utilise pas `LazyVerticalGrid` : un algorithme de placement maison garantit que
-toutes les tuiles d'une rangée partagent **exactement** `tileHeight`, y compris les tuiles
-larges (2 × 1) et grandes (2 × 2). Sans cela, un nom long sur deux lignes décalait la
-rangée entière. Les tuiles `wide` occupent 2 colonnes, les `large` 2 × 2 ; le placement
+Deux grilles coexistent :
+
+- `TileGrid` pour l'accueil **généré** (sans tableau personnel). Il n'utilise pas
+  `LazyVerticalGrid` : un algorithme de placement maison garantit que toutes les tuiles
+d'une rangée partagent **exactement** `tileHeight`, y compris les tuiles larges (2 × 1) et
+grandes (2 × 2). Les tuiles `wide` occupent 2 colonnes, les `large` 2 × 2 ; le placement
 comble les trous dans l'ordre du document.
+- `FreeTileGrid` pour l'accueil **personnalisé**. Chaque case porte sa position
+  (`gridCol`, `gridRow`) et sa portée (`spanX`, `spanY`) ; l'ordre du document n'impose
+  rien. Une case peut donc être placée entre deux autres, sur une seule cellule, ou
+  occuper plusieurs colonnes et rangées.
+
+`DashboardLayout` (domaine pur, testé) fournit `overlaps`, `firstFree`, `autoPlace` et
+`settle` : après un déplacement ou un redimensionnement, les cases qui se chevauchent sont
+recalées vers le premier emplacement libre, avec une animation de ressort. Une case peut
+être déplacée jusqu'à la largeur de l'écran et redimensionnée sur autant de rangées que
+nécessaire.
 
 ---
 
@@ -325,7 +339,7 @@ comble les trous dans l'ordre du document.
 | `id` | `String` | identifiant dans le document |
 | `name` | `String` | libellé |
 | `stateText` | `String` | état déjà localisé (« Allumé », « 72 % »), omis s'il est vide |
-| `category` | `TileCategory` | `Light`, `Climate`, `Switch`, `Cover`, `Lock`, `Alarm`, `Media`, `Sensor`, `Camera`, `Vacuum`, `Scene`, `Generic` — pilote icône et couleur |
+| `category` | `TileCategory` | `Light`, `Climate`, `Switch`, `Cover`, `Lock`, `Alarm`, `Media`, `Sensor`, `Camera`, `Vacuum`, `Scene`, `Generic`, `Clock`, `Photo`, `Calendar` — pilote icône et couleur |
 | `isActive`, `isAvailable` | `Boolean` | fond actif / entité disponible |
 | `size` | `TileSize` | `Small` (1×1), `Wide` (2×1), `Large` (2×2) |
 | `level` | `Float?` | 0…1 : luminosité ou position |
@@ -348,8 +362,22 @@ Assistant.
 - `CoverTile` : glissière de position (0–100 %).
 - `MediaTile` : pochette, titre, artiste et état (`mediaStatusText`) ; un appui met la
   lecture en pause sans couper l'alimentation, un appui long ouvre le lecteur plein écran.
+  Dès **2 × 2**, la case passe en disposition « grande » : pochette carrée en grand à
+  gauche, et à droite uniquement précédent / lecture-pause / suivant. La disposition reste
+  affichée en pause ; l'icône du bouton bascule dès le toucher (état optimiste) puis se
+  recale sur l'état réel renvoyé par Home Assistant. Les commandes passent par
+  `LocalMediaControls` (`MediaControlHandlers`), fourni à la racine, pour ne pas traverser
+  toutes les grilles.
 - `SensorTile` : valeur en grand (`sensorValue`), nom en dessous, icône masquée
-  (`showIcon = false`) pour laisser la place au chiffre.
+  (`showIcon = false`) pour laisser la place au chiffre. À partir de **2 × 2**, la grande
+  valeur et le nom passent à gauche et une pastille circulaire avec l'icône du capteur
+  occupe la droite ; les formats large (2 × 1) et haut (1 × 2) gardent une disposition
+  côte à côte ou empilée.
+- `ClockTile`, `PhotoTile`, `CalendarTile` : cases décoratives locales (horloge 3 thèmes,
+  photo du jour Bing 2 thèmes, calendrier 3 thèmes). Elles n'ont aucune entité et
+  n'exécutent aucune action. La case « texte » a été retirée : `WidgetKind.Title` n'est
+  conservé que pour relire d'anciens documents, et les cases correspondantes sont
+  supprimées au chargement.
 - Cartes de scènes : dégradé propre à la scène, nom, action `scene.turn_on`.
 
 ### 6.3 Règle de contraste (correctif important)
@@ -538,16 +566,64 @@ proche, 260 sinon. Conséquences assumées :
 
 ---
 
+
+
+---
+
 ## 10. Tableau de bord personnel
 
-`CustomDashboard` est un document local (pas un layout serveur) : une liste de zones
-(`id`, `title`, `entityIds`). Il est stocké dans `CustomDashboardStore` (DataStore
-`homeglass_dashboard`) et normalisé à l'écriture (identifiants dédoublonnés, zones vides
-retirées, ordre conservé). Un ancien format `entity_ids` (simple liste) est migré
-automatiquement vers une zone unique.
+`CustomDashboard` est un document local (pas un layout serveur) : une **grille libre** de
+`PlacedTile`. Le modèle vit dans `domain/dashboard/` et ne dépend ni d'Android ni du réseau.
 
-L'éditeur permet d'ajouter une zone, de la renommer, de la supprimer et d'y choisir des
-appareils parmi ceux connus. Le rendu utilise les mêmes tuiles que le dashboard principal.
+| Champ | Rôle |
+| --- | --- |
+| `id` | identifiant stable de la case |
+| `entityId` | entité Home Assistant pilotée (exclusif avec `widget`) |
+| `widget` | case décorative locale (`WidgetItem`) |
+| `col`, `row` | position sur la grille, en cellules |
+| `spanX`, `spanY` | portée en cellules, au moins 1 |
+| `label` | nom affiché personnalisé (`null` : nom Home Assistant) |
+
+`normalized()` assainit le document à la lecture comme à l'écriture : géométrie ramenée à
+au moins une cellule, identifiants dédoublonnés, libellés vides retirés, cases sans entité
+ni widget ignorées, et cases `Title` supprimées. L'ancien format (zones `sections` et
+`widgets`) est migré une seule fois vers des cases auto-placées par
+`DashboardLayout.autoPlace`. L'ancien format `entity_ids` (simple liste) est également
+migré.
+
+Persistance : DataStore `homeglass_dashboard`, clé `dashboard` (JSON). Un document
+illisible retombe sur « aucun tableau personnalisé » et la page générée s'affiche, sans
+casser l'écran. Un tableau vide est traité comme « non configuré ».
+
+### 10.1 Rendu
+
+`withCustomLayout()` remplace les sections d'entités par une section `freeform` unique ;
+les scènes restent affichées dessous. Le nom affiché vient de `label` quand il existe,
+sinon du nom Home Assistant. Une case dont l'entité a disparu du layout courant est
+ignorée : l'accueil continue de s'afficher après une modification côté Home Assistant.
+
+### 10.2 Éditeur (`ui/custom/CustomDashboardScreen`)
+
+- **Canevas** : chaque case est un aperçu réel de la tuile, remesurée à chaque changement
+  de portée (le contenu se réorganise, ce n'est pas un zoom). Une surcouche de gestes capte
+  le glissement et le redimensionnement.
+- **Déplacement** : glisser la case ; les positions sont animées et `DashboardLayout.settle`
+  recale les cases en collision.
+- **Redimensionnement** : poignée ronde en bas à droite, jusqu'à `columns` de large et
+  autant de rangées que voulu.
+- **Palette** : chips Horloge / Photo / Calendrier, champ de recherche, et **liste des
+  appareils toujours visible** (triée par nom) ; la recherche filtre cette liste.
+- **Renommage** : le nom saisi n'est mémorisé comme `label` que s'il diffère réellement du
+  nom Home Assistant (`storedLabel`). La comparaison utilise les noms d'origine, pas la
+  liste déjà renommée — sinon l'étiquette était effacée à chaque enregistrement.
+- **Stabilité** : l'éditeur reçoit un instantané de la disposition pris à l'ouverture
+  (`editorSeed` dans `AppRoot`) et ne réindexe plus son état sur les listes vivantes. Les
+  relevés d'état Home Assistant ne réinitialisent donc plus le canevas en cours de
+  modification, et un enregistrement ne peut plus écraser le tableau par la page générée.
+- **Thème** : l'éditeur suit le thème clair/sombre de l'application (plus de mode sombre
+  forcé) ; le canevas reprend le dégradé de fond.
+- **Actions** : « Enregistrer » sauvegarde la grille ; « Tableau généré » efface le tableau
+  personnel et rend la main à la génération automatique.
 
 ---
 
@@ -581,7 +657,8 @@ appareils parmi ceux connus. Le rendu utilise les mêmes tuiles que le dashboard
 
 Le document décrit une interface complète : thème, onglets, accueil, pièces, profil
 d'appareil. Il est défini par des modèles Pydantic côté add-on (JSON Schema généré dans
-`homeglass-server/schema/layout.v1.json`) et par `domain/layout/Layout.kt` côté application.
+`schema/layout.v1.json` du dépôt [HomeGlass-Addon](https://github.com/boubalouf/HomeGlass-Addon))
+et par `domain/layout/Layout.kt` côté application.
 
 Sur le fil, les clés sont en **camelCase** (les modèles Python sont en snake_case avec un
 `alias_generator = to_camel`). Tous les champs optionnels ont un défaut explicite et l'API
@@ -844,10 +921,11 @@ le layout publié grâce au renommage atomique.
 
 ### 14.8 Tests
 
-- Python : **103 fonctions** `test_` dans `homeglass-server/tests`, soit **171 cas** avec
-  les paramétrages (contrat, routes, appairage, passerelle, stockage, sécurité).
-- Schéma : généré depuis les modèles, comparé en test pour éviter toute dérive.
-- Exécution : `cd homeglass-server && .venv/bin/pytest`.
+Les tests Python de l'add-on (**103 fonctions** `test_`, **171 cas** avec les
+paramétrages : contrat, routes, appairage, passerelle, stockage, sécurité) se trouvent dans
+le dépôt [HomeGlass-Addon](https://github.com/boubalouf/HomeGlass-Addon), avec le schéma
+généré depuis les modèles et comparé en test. Exécution : dans ce dépôt,
+`cd tests && pytest` (voir son README).
 
 ---
 
@@ -892,15 +970,17 @@ le layout publié grâce au renommage atomique.
 
 | Suite | Emplacement | Volume | Commande |
 | --- | --- | --- | --- |
-| Kotlin (JVM) | `app/src/test/java` | 132 `@Test` | `./gradlew :app:testDebugUnitTest` |
-| Python | `homeglass-server/tests` | 103 `test_` / 171 cas | `cd homeglass-server && .venv/bin/pytest` |
+| Kotlin (JVM) | `app/src/test/java` | 140 `@Test` | `./gradlew :app:testDebugUnitTest` |
 
 Couverture Kotlin : parsing et tolérance du layout, génération, présentation d'entités,
-planification de présence, politique de cleartext, backoff, normalisation du tableau
-personnel, mapping des commandes, formatage des valeurs.
+planification de présence, politique de cleartext, backoff, normalisation et migration du
+tableau personnel, grille libre (`DashboardLayout`), étiquettes de renommage, mapping des
+commandes, formatage des valeurs.
+
+Les tests Python de l'add-on sont dans le dépôt séparé (voir §14.8).
 
 Build complet : `./gradlew :app:testDebugUnitTest :app:assembleDebug`. Les deux passent
-actuellement (132 tests, 0 échec) et l'APK s'installe sur la tablette de test.
+actuellement (140 tests, 0 échec) et l'APK s'installe sur la tablette de test.
 
 ---
 
@@ -926,9 +1006,10 @@ actuellement (132 tests, 0 échec) et l'APK s'installe sur la tablette de test.
 8. **Une seule langue de contenu** : les textes sont français dans `values/strings.xml`
    (les ressources sont limitées à `fr`/`en`, une traduction anglaise reste à écrire).
 9. **Pas d'historique ni de graphiques** : courbes de capteurs, statistiques et énergie ne
-   sont pas affichées (les chips Énergie/Climat sont des synthèses d'état).
-10. **Le dépôt n'est pas versionné par git** dans cet environnement : aucun commit n'est
-    créé par les scripts de build.
+   sont pas affichées.
+10. **Grandes dispositions réservées au 2 × 2** : la grande case média (pochette +
+    commandes) et la grande case capteur (valeur géante + pastille) ne s'activent qu'à
+    partir de 2 colonnes × 2 rangées ; en dessous, la tuile garde sa disposition compacte.
 
 ---
 

@@ -158,6 +158,30 @@
     <string name="customize_target">Ajout à : %1$s</string>
     <string name="customize_target_none">première zone</string>
     <string name="customize_drag">Glisser pour déplacer</string>
+    <string name="customize_resize">Redimensionner</string>
+    <string name="customize_drag_hint">Glissez les cases pour les déplacer, tirez la poignée en bas à droite pour changer leur taille.</string>
+    <string name="customize_widgets_title">Cases déco</string>
+
+    <!-- Cases décoratives (horloge, photo, calendrier) -->
+    <string name="widget_clock">Horloge</string>
+    <string name="widget_photo">Photo</string>
+    <string name="widget_calendar">Calendrier</string>
+    <string name="widget_title">Titre</string>
+    <string name="widget_title_default">Titre</string>
+    <string name="customize_title_text_hint">Texte du titre</string>
+    <string name="customize_rename_hint">Nom affiché</string>
+    <string name="theme_clock_classic">Classique</string>
+    <string name="theme_clock_minimal">Minimal</string>
+    <string name="theme_clock_bold">Audacieux</string>
+    <string name="theme_photo_cover">Plein cadre</string>
+    <string name="theme_photo_soft">Voilé</string>
+    <string name="theme_calendar_minimal">Minimal</string>
+    <string name="theme_calendar_week">Semaine</string>
+    <string name="theme_calendar_focus">Focus</string>
+    <string name="widget_photo_pending">Photo en attente</string>
+    <string name="a11y_clock_tile">Horloge, %1$s</string>
+    <string name="a11y_calendar_tile">Calendrier, %1$s</string>
+    <string name="a11y_photo_tile">Photo du jour</string>
 
     <!-- Erreurs de commande -->
     <string name="error_command">Commande refusée par Home Assistant.</string>

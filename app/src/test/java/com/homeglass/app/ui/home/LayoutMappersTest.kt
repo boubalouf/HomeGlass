@@ -162,7 +162,8 @@ class LayoutMappersTest {
         val home = layout(HOME).toHomeUi()
         assertTrue(home.sections.none { it.id == "sec_vide" })
         assertEquals("Maison", home.title)
-        assertEquals(5, home.chips.size)
+        // Lumières, climat, sécurité et médias sont retirées de l'accueil : seule l'énergie reste.
+        assertEquals(listOf(SummaryChipUi.Energy), home.chips)
     }
 
     private companion object {

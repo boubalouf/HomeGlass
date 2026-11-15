@@ -9,18 +9,24 @@ import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxScope
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
@@ -122,6 +128,10 @@ fun DeviceTile(
     tint: Color = TileVisuals.color(model, GlassTheme.colors),
     backgroundOverlay: @Composable BoxScope.() -> Unit = {},
     bottomContent: (@Composable ColumnScope.() -> Unit)? = null,
+    /** Disposition spécifique quand la case est nettement plus large que haute. */
+    wideContent: (@Composable RowScope.() -> Unit)? = null,
+    /** Disposition dédiée aux grandes cases (2 colonnes × 2 rangées ou plus). */
+    largeContent: (@Composable BoxScope.() -> Unit)? = null,
     showIcon: Boolean = true,
 ) {
     val colors = GlassTheme.colors
@@ -176,26 +186,97 @@ fun DeviceTile(
             val textSpace = maxHeight - if (showIcon) dimens.tileIcon else 0.dp
             val nameMaxLines = if (textSpace >= nameLine * 2 + statusSpace + 2.dp) 2 else 1
 
-            Column(modifier = Modifier.fillMaxSize()) {
-                if (showIcon) {
-                    Icon(
-                        imageVector = icon,
-                        contentDescription = null, // décoratif : la description est portée par la tuile entière
-                        tint = iconTint,
-                        modifier = Modifier.size(dimens.tileIcon),
-                    )
+            // Disposition choisie sur la forme réelle de la case, pas sur sa portée : une
+            // case nettement plus large que haute place l'icône à gauche et le texte à
+            // droite ; une case plus haute que large aère la disposition verticale. Ce n'est
+            // donc pas un agrandissement : la disposition interne change réellement.
+            val wide = bottomContent == null && maxWidth > maxHeight * 1.7f
+            val tall = maxHeight > maxWidth * 1.2f
+
+            if (largeContent != null && model.spanX >= 2 && model.spanY >= 2) {
+                largeContent()
+            } else if (wide) {
+                Row(
+                    modifier = Modifier.fillMaxSize(),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    if (showIcon) {
+                        Icon(
+                            imageVector = icon,
+                            contentDescription = null,
+                            tint = iconTint,
+                            modifier = Modifier.size(dimens.tileIcon),
+                        )
+                        Spacer(Modifier.width(12.dp))
+                    }
+                    Row(
+                        modifier = Modifier.weight(1f),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        when {
+                            wideContent != null -> wideContent()
+                            bottomContent != null -> Column { bottomContent() }
+                            else -> Column(modifier = Modifier.weight(1f)) {
+                                TileTexts(
+                                    name = model.name,
+                                    status = model.stateText,
+                                    nameColor = nameColor,
+                                    statusColor = statusColor,
+                                    nameMaxLines = 2,
+                                )
+                            }
+                        }
+                    }
                 }
-                Spacer(Modifier.weight(1f))
-                if (bottomContent != null) {
-                    bottomContent()
-                } else {
-                    TileTexts(
-                        name = model.name,
-                        status = model.stateText,
-                        nameColor = nameColor,
-                        statusColor = statusColor,
-                        nameMaxLines = nameMaxLines,
-                    )
+            } else if (tall) {
+                // Case haute : icône et texte centrés ensemble, sans grand vide au-dessus.
+                Column(
+                    modifier = Modifier.fillMaxSize(),
+                    verticalArrangement = Arrangement.Center,
+                ) {
+                    if (showIcon) {
+                        Icon(
+                            imageVector = icon,
+                            contentDescription = null,
+                            tint = iconTint,
+                            modifier = Modifier.size(dimens.tileIcon),
+                        )
+                        Spacer(Modifier.height(8.dp))
+                    }
+                    if (bottomContent != null) {
+                        bottomContent()
+                    } else {
+                        TileTexts(
+                            name = model.name,
+                            status = model.stateText,
+                            nameColor = nameColor,
+                            statusColor = statusColor,
+                            nameMaxLines = 2,
+                        )
+                    }
+                }
+            } else {
+                Column(modifier = Modifier.fillMaxSize()) {
+                    if (showIcon) {
+                        Icon(
+                            imageVector = icon,
+                            contentDescription = null, // décoratif : la description est portée par la tuile entière
+                            tint = iconTint,
+                            modifier = Modifier.size(dimens.tileIcon),
+                        )
+                    }
+                    Spacer(Modifier.weight(1f))
+                    if (bottomContent != null) {
+                        bottomContent()
+                    } else {
+                        TileTexts(
+                            name = model.name,
+                            status = model.stateText,
+                            nameColor = nameColor,
+                            statusColor = statusColor,
+                            nameMaxLines = nameMaxLines,
+                        )
+                    }
                 }
             }
         }

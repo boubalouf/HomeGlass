@@ -5,6 +5,7 @@ import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import com.homeglass.app.domain.dashboard.CustomDashboard
+import com.homeglass.app.domain.dashboard.CustomSection
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
@@ -28,7 +29,14 @@ class CustomDashboardStore(private val context: Context) {
         val current: CustomDashboard? = preferences[KEY]?.let(::decode)
         when {
             current != null -> current
-            else -> preferences[LEGACY_KEY]?.let(::decodeLegacy)?.let(CustomDashboard::single)
+            else -> preferences[LEGACY_KEY]
+                ?.let(::decodeLegacy)
+                ?.takeIf { it.isNotEmpty() }
+                ?.let { ids ->
+                    CustomDashboard(
+                        sections = listOf(CustomSection(id = "zone_accueil", entityIds = ids)),
+                    ).normalized()
+                }
                 ?: CustomDashboard()
         }
     }
@@ -37,7 +45,7 @@ class CustomDashboardStore(private val context: Context) {
         val cleaned = dashboard.normalized()
         context.customDashboardDataStore.edit { preferences ->
             preferences.remove(LEGACY_KEY)
-            if (cleaned.isConfigured) {
+            if (cleaned.hasContent) {
                 preferences[KEY] = Json.encodeToString(CustomDashboard.serializer(), cleaned)
             } else {
                 preferences.remove(KEY)

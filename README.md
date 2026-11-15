@@ -5,47 +5,47 @@ Tableau de bord domotique **Android natif** au style « Apple Maison », piloté
 transparence façon verre dépoli, barre d'onglets flottante, réveil automatique de l'écran
 au passage d'une personne.
 
-Le dépôt contient **deux livrables** :
+Ce dépôt contient **l'application Android** (Kotlin, Jetpack Compose). L'add-on Home
+Assistant « **HomeGlass Server** » (Python, FastAPI) vit dans un dépôt séparé :
+[HomeGlass-Addon](https://github.com/boubalouf/HomeGlass-Addon).
 
 | Dossier | Contenu |
 | --- | --- |
 | `app/` | Application Android (Kotlin, Jetpack Compose) |
-| `homeglass-server/` | Add-on Home Assistant « **HomeGlass Server** » (Python, FastAPI) |
 
 ---
 
 ## Ce que fait l'application
 
-- **Affiche un tableau de bord** : un accueil (favoris, scènes, sections par famille
-  d'appareils), un onglet **Pièces** (une section par pièce Home Assistant) et un onglet
-  **Réglages**, avec une barre d'onglets en bas.
+- **Affiche un tableau de bord** : un accueil composable librement, un onglet **Pièces**
+  (une section par pièce Home Assistant) et un onglet **Réglages**, avec une barre
+  d'onglets en bas.
 - **Pilote les appareils en temps réel** : lumières (allumage, luminosité, couleur,
   température de blanc), volets, serrures, prises, ventilateurs, aspirateurs, scènes,
   enceintes.
 - **Suit Home Assistant** via WebSocket : chaque changement d'état met la tuile à jour en
   moins d'une seconde, sans recharger l'écran.
+- **Personnalise l'accueil directement sur la tablette** : une **grille libre** où chaque
+  case se déplace au doigt et se redimensionne par sa poignée. Les cases se recalent
+  automatiquement en cas de chevauchement, et la disposition est conservée après
+  redémarrage. L'éditeur suit le thème clair/sombre de l'application.
+- **Ajoute des cases décoratives** : horloge (3 thèmes), photo du jour (fonds Bing,
+  2 thèmes) et calendrier (3 thèmes). La case « texte » a été retirée.
+- **Renomme les appareils** : le nom affiché sur la tablette peut remplacer celui de Home
+  Assistant, sans modifier l'entité. Les pseudos sont conservés d'un enregistrement à
+  l'autre.
+- **Grandes cases média** : dès 2 × 2, une enceinte affiche la pochette en grand à gauche
+  et les commandes précédent / lecture-pause / suivant à droite. Le bouton bascule
+  immédiatement entre lecture et pause, et la grande disposition reste affichée en pause.
+- **Grandes cases capteur** : à partir de 2 × 2, la valeur s'affiche en très grand avec le
+  nom et une pastille d'icône décorative pour occuper l'espace.
 - **Ouvre un lecteur plein écran** dès qu'une enceinte démarre (pochette, titre, artiste,
   lecture/pause, piste suivante/précédente, volume), en mode paysage.
-- **Personnalise l'accueil sans l'add-on** : un éditeur sur la tablette permet de composer
-  des zones titrées et d'y placer les appareils de son choix.
 - **Rallume l'écran au passage d'une personne** : capteur de proximité (seuil, anti-rebond
   et journal dans les Réglages). Le réveil par caméra frontale est amorcé mais pas encore
   actif — voir les limites connues dans [Spécificité.md](Spécificité.md).
 - **Se connecte de trois façons** : appairage par code avec l'add-on (recommandé), jeton
   d'accès longue durée, ou OAuth2/PKCE (optionnel, voir plus bas).
-
-## Ce que fait l'add-on
-
-**HomeGlass Server** est le futur poste de conception du dashboard : pièces, sections,
-tuiles, scènes, thème, onglets et profils par appareil. Il expose une **API JSON** à
-l'application, relaie les appels de service et le WebSocket de Home Assistant, et sert un
-panneau dans la barre latérale de Home Assistant (Ingress). Il produit le **contrat de mise
-en page v1** (schéma versionné, JSON Schema généré depuis les modèles Pydantic).
-
-> État actuel : l'application **génère encore sa mise en page localement** à partir des
-> registres Home Assistant. Le contrat v1 et son parseur tolérant sont en place des deux
-> côtés, et l'add-on sert déjà `/api/layout` ; le branchement de l'application sur ce
-> document est l'étape suivante. L'éditeur web de l'add-on est encore une page d'accueil.
 
 ---
 
@@ -54,7 +54,6 @@ en page v1** (schéma versionné, JSON Schema généré depuis les modèles Pyda
 ### Prérequis
 
 - JDK 17, Android SDK (compileSdk 35), un appareil en **Android 8.0 (API 26)** minimum.
-- Pour l'add-on : Home Assistant OS/Supervised, ou Python 3.12 pour le développement.
 
 ### Construire et installer l'application
 
@@ -66,16 +65,16 @@ adb install -r app/build/outputs/apk/debug/app-debug.apk
 ### Lancer les tests
 
 ```bash
-./gradlew :app:testDebugUnitTest          # 132 tests Kotlin
-cd homeglass-server && .venv/bin/pytest   # 103 fonctions de test Python
+./gradlew :app:testDebugUnitTest          # 140 tests Kotlin
 ```
 
-### Installer l'add-on
+### Installer l'add-on (optionnel)
 
-1. Home Assistant → **Paramètres → Modules complémentaires → Boutique → ⋮ → Dépôts**,
-   ajouter l'URL du dépôt d'add-ons : ``` https://github.com/boubalouf/HomeGlass-Addon ```.
-2. Installer **HomeGlass Server**, démarrer, ouvrir le panneau **HomeGlass**.
-3. Le port `8765` expose l'API utilisée par l'application (option `api_port`).
+L'add-on et ses instructions se trouvent dans
+[HomeGlass-Addon](https://github.com/boubalouf/HomeGlass-Addon) : ajouter ce dépôt dans
+**Paramètres → Modules complémentaires → Boutique → ⋮ → Dépôts**, installer
+**HomeGlass Server**, puis ouvrir le panneau **HomeGlass**. Le port `8765` expose l'API
+utilisée par l'application.
 
 ---
 
@@ -151,6 +150,26 @@ par la `MainActivity` (`homeglass://auth-callback`).
 
 ---
 
+## Personnaliser l'accueil
+
+Le bouton **Modifier** ouvre un éditeur plein écran :
+
+- **Déplacer** : glisser une case ; les autres se recalent pour éviter tout chevauchement.
+- **Redimensionner** : tirer la poignée ronde en bas à droite (de 1 × 1 jusqu'à la largeur
+  de l'écran).
+- **Ajouter un appareil** : la liste des appareils disponibles est **toujours visible**
+  sous le champ de recherche, triée par nom ; la recherche ne fait que la filtrer.
+- **Ajouter une case déco** : boutons Horloge, Photo, Calendrier.
+- **Renommer** : sélectionner un appareil puis saisir un nom affiché.
+- **Enregistrer** conserve la disposition ; **Tableau généré** revient à la page produite
+  automatiquement par Home Assistant.
+
+La grille compte 2, 3 ou 4 colonnes selon la largeur disponible. L'éditeur utilise
+l'instantané de la disposition pris à son ouverture : les mises à jour d'état Home
+Assistant ne réinitialisent pas le travail en cours.
+
+---
+
 ## Réseau et sécurité (résumé)
 
 - **Jetons** : `EncryptedSharedPreferences` (AES-256, clé dans Android Keystore). Aucun jeton
@@ -170,17 +189,19 @@ par la `MainActivity` (`homeglass://auth-callback`).
 app/                          application Android
   src/main/java/com/homeglass/app/
     ui/                       écrans, tuiles, thème, composants
-    data/                     Home Assistant (REST, WebSocket), cache, présence
-    domain/                   contrat de layout, états, commandes, règles pures
-  src/test/                   132 tests JVM
-homeglass-server/             add-on Home Assistant (FastAPI)
-  homeglass_server/           API, modèles Pydantic, client HA, stockage
-  schema/layout.v1.json       JSON Schema du contrat v1
-  tests/                      103 tests pytest
+      tiles/                  FreeTileGrid, DeviceTile, MediaTile, SensorTile,
+                              ClockTile, PhotoTile, CalendarTile, MediaControls
+      custom/                 éditeur de la grille libre
+      home/                   modèle d'accueil, placement et widgets
+    data/                     Home Assistant (REST, WebSocket), cache, présence,
+                              tableau personnel, fonds photo
+    domain/                   contrat de layout, états, commandes, règles pures,
+                              CustomDashboard et DashboardLayout (grille libre)
+  src/test/                   140 tests JVM
 ```
 
 ## Documentation détaillée
 
-Tout le reste — architecture interne, contrat de mise en page, tables de couleurs, règles
-de contraste, constantes du réveil de présence, API de l'add-on, sécurité, tests et limites
-connues — est décrit dans **[Spécificité.md](Spécificité.md)**.
+Tout le reste — architecture interne, grille libre et éditeur, contrat de mise en page,
+tables de couleurs, règles de contraste, constantes du réveil de présence, API de l'add-on,
+sécurité, tests et limites connues — est décrit dans **[Spécificité.md](Spécificité.md)**.

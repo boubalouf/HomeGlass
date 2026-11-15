@@ -45,6 +45,7 @@ import com.homeglass.app.core.haptics.rememberGlassHaptics
 import com.homeglass.app.domain.layout.LayoutIssue
 import com.homeglass.app.domain.layout.LayoutState
 import com.homeglass.app.ui.theme.GlassTheme
+import com.homeglass.app.ui.tiles.FreeTileGrid
 import com.homeglass.app.ui.tiles.TileGrid
 import com.homeglass.app.ui.tiles.TileUiModel
 
@@ -143,6 +144,7 @@ private fun HomeContent(
             when (section.kind) {
                 HomeSectionKind.Tiles -> TileSection(
                     tiles = section.tiles,
+                    freeform = section.freeform,
                     onTileTap = onTileTap,
                     onTileLongPress = onTileLongPress,
                     onTileLevelChange = onTileLevelChange,
@@ -157,21 +159,35 @@ private fun HomeContent(
     }
 }
 
-/** Grille de tuiles d'une section, partagée par l'accueil et les pièces. */
+/**
+ * Grille de tuiles d'une section, partagée par l'accueil et les pièces. Une section
+ * `freeform` utilise les positions enregistrées sur la grille libre ; les autres gardent le
+ * placement automatique compact.
+ */
 @Composable
 internal fun TileSection(
     tiles: List<TileUiModel>,
     onTileTap: (TileUiModel) -> Unit,
     onTileLongPress: (TileUiModel) -> Unit,
     onTileLevelChange: (TileUiModel, Float) -> Unit,
+    freeform: Boolean = false,
 ) {
     if (tiles.isEmpty()) return
-    TileGrid(
-        tiles = tiles,
-        onTileClick = onTileTap,
-        onTileLongClick = onTileLongPress,
-        onTileLevelChange = onTileLevelChange,
-    )
+    if (freeform) {
+        FreeTileGrid(
+            tiles = tiles,
+            onTileClick = onTileTap,
+            onTileLongClick = onTileLongPress,
+            onTileLevelChange = onTileLevelChange,
+        )
+    } else {
+        TileGrid(
+            tiles = tiles,
+            onTileClick = onTileTap,
+            onTileLongClick = onTileLongPress,
+            onTileLevelChange = onTileLevelChange,
+        )
+    }
 }
 
 @OptIn(ExperimentalLayoutApi::class)

@@ -56,6 +56,25 @@ fun EntityTile(
             modifier = modifier,
         )
 
+        TileCategory.Clock -> ClockTile(
+            model = model,
+            onLongClick = { onLongClick(model) },
+            modifier = modifier,
+        )
+
+        TileCategory.Photo -> PhotoTile(
+            model = model,
+            onLongClick = { onLongClick(model) },
+            modifier = modifier,
+        )
+
+        TileCategory.Calendar -> CalendarTile(
+            model = model,
+            onLongClick = { onLongClick(model) },
+            modifier = modifier,
+        )
+
+
         // Switch, climate, lock, alarm, camera, vacuum, generic : disposition standard.
         else -> DeviceTile(
             model = model,
