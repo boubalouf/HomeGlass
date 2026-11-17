@@ -1,3 +1,4 @@
+import java.util.Properties
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 
 plugins {
@@ -15,8 +16,8 @@ android {
         applicationId = "com.homeglass.app"
         minSdk = 26
         targetSdk = 35
-        versionCode = 1
-        versionName = "0.1.0"
+        versionCode = 2
+        versionName = "0.2.0"
         resourceConfigurations += listOf("fr", "en")
 
         // OAuth Home Assistant : renseigner ces deux propriétés dans gradle.properties
@@ -34,6 +35,23 @@ android {
         )
     }
 
+    // Signature de release lue depuis .signing/keystore.properties (jamais commité).
+    // Sans ce fichier, assembleRelease produit un APK non signé.
+    val signingProperties = Properties().apply {
+        val file = rootProject.file(".signing/keystore.properties")
+        if (file.exists()) file.inputStream().use { load(it) }
+    }
+    signingConfigs {
+        if (signingProperties.getProperty("storeFile") != null) {
+            create("release") {
+                storeFile = rootProject.file(signingProperties.getProperty("storeFile"))
+                storePassword = signingProperties.getProperty("storePassword")
+                keyAlias = signingProperties.getProperty("keyAlias")
+                keyPassword = signingProperties.getProperty("keyPassword")
+            }
+        }
+    }
+
     buildTypes {
         release {
             isMinifyEnabled = true
@@ -42,12 +60,19 @@ android {
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro",
             )
+            signingConfig = signingConfigs.findByName("release")
         }
     }
 
     buildFeatures {
         compose = true
         buildConfig = true
+    }
+
+    lint {
+        // Détecteur AGP 8.7 qui plante sur ce projet (IncompatibleClassChangeError) :
+        // le désactiver évite de bloquer lintVitalRelease sur un bug de l'outil.
+        disable += "NullSafeMutableLiveData"
     }
 
     compileOptions {
@@ -81,6 +106,9 @@ dependencies {
 
     // Flou d'arrière-plan réel (Android 12+) avec repli translucide.
     implementation(libs.haze)
+
+    // Moteur Firefox embarqué : seule façon de lire le Web Player Spotify (DRM) dans l'app.
+    implementation(libs.geckoview)
 
     // Home Assistant : REST + WebSocket, découverte mDNS, lien d'authentification.
     implementation(libs.okhttp)

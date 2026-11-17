@@ -56,6 +56,7 @@ import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
@@ -99,6 +100,7 @@ fun NowPlayingScreen(
     onNext: () -> Unit,
     onPrevious: () -> Unit,
     onVolume: (level: Float) -> Unit,
+    onOpenSpotify: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val accent = GlassTheme.colors.accent
@@ -171,6 +173,7 @@ fun NowPlayingScreen(
                 title = title,
                 status = playbackStateLabel(state.state),
                 onDismiss = onDismiss,
+                onOpenSpotify = onOpenSpotify,
             )
 
             if (landscape) {
@@ -267,9 +270,14 @@ fun NowPlayingScreen(
     }
 }
 
-/** Nom de l'enceinte et état de lecture, avec le bouton de fermeture. */
+/** Nom de l'enceinte, état de lecture, accès au Web Player Spotify et fermeture. */
 @Composable
-private fun PlayerHeader(title: String, status: String, onDismiss: () -> Unit) {
+private fun PlayerHeader(
+    title: String,
+    status: String,
+    onDismiss: () -> Unit,
+    onOpenSpotify: () -> Unit,
+) {
     Row(
         modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.SpaceBetween,
@@ -291,6 +299,8 @@ private fun PlayerHeader(title: String, status: String, onDismiss: () -> Unit) {
             )
         }
         Spacer(Modifier.width(12.dp))
+        SpotifyButton(onOpenSpotify)
+        Spacer(Modifier.width(10.dp))
         CloseButton(onDismiss)
     }
 }
@@ -555,6 +565,32 @@ private fun TransportButton(
             contentDescription = null,
             tint = Color.White,
             modifier = Modifier.size(iconSize),
+        )
+    }
+}
+
+/** Accès au Web Player Spotify depuis le lecteur vinyle. */
+@Composable
+private fun SpotifyButton(onClick: () -> Unit) {
+    val description = stringResource(R.string.spotify_open_web)
+
+    Box(
+        modifier = Modifier
+            .size(44.dp)
+            .clip(CircleShape)
+            .background(Color.White.copy(alpha = 0.14f))
+            .clickable(
+                interactionSource = remember { MutableInteractionSource() },
+                indication = null,
+                onClick = onClick,
+            )
+            .semantics { contentDescription = description },
+        contentAlignment = Alignment.Center,
+    ) {
+        Image(
+            painter = painterResource(R.drawable.ic_spotify),
+            contentDescription = null,
+            modifier = Modifier.size(26.dp),
         )
     }
 }

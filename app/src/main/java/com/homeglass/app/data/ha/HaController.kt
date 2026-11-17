@@ -3,10 +3,12 @@ package com.homeglass.app.data.ha
 import android.content.Context
 import android.net.Uri
 import android.os.SystemClock
+import android.util.Log
 import com.homeglass.app.data.layout.LayoutCache
 import com.homeglass.app.data.layout.LayoutRepository
 import com.homeglass.app.domain.ha.BaseUrlChooser
 import com.homeglass.app.domain.ha.CleartextPolicy
+import com.homeglass.app.domain.ha.CommandLogEntry
 import com.homeglass.app.domain.ha.ConnectionFailure
 import com.homeglass.app.domain.ha.ConnectionStatus
 import com.homeglass.app.domain.ha.EntityState
@@ -19,13 +21,17 @@ import java.io.IOException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
+import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonElement
+import kotlinx.serialization.json.JsonPrimitive
+import kotlinx.serialization.json.contentOrNull
 
 /** Erreur de commande, traduite en message discret par l'UI. */
 enum class CommandError { Network, Unauthorized, Server, EntityMissing }
@@ -70,6 +76,11 @@ class HaController(
 
     private val appContext = context.applicationContext
 
+    private val commandLog = CommandLogStore(appContext)
+
+    /** Journal local des commandes, du plus récent au plus ancien (Réglages). */
+    val commands: Flow<List<CommandLogEntry>> = commandLog.entries
+
     private val realtime = HaRealtime(
         client = HttpClientFactory.create(),
         scope = scope,
@@ -105,6 +116,13 @@ class HaController(
 
     private var pendingOAuth: PendingOAuth? = null
 
+    /**
+     * Vrai pendant l'édition du tableau : la liaison temps réel est coupée pour que les
+     * relevés ne relancent ni rendu ni requêtes sous l'éditeur. Les états déjà reçus restent
+     * en mémoire ; [setLiveUpdatesPaused] la rétablit à la fermeture.
+     */
+    private var livePaused = false
+
     val oauthAvailable: Boolean get() = auth.isConfigured
     val oauthRedirectUri: String get() = auth.redirectUri
 
@@ -139,14 +157,30 @@ class HaController(
             networkMonitor.changes.collect {
                 if (_session.value != null) {
                     ensureBaseUrl()
-                    realtime.restart()
+                    if (!livePaused) realtime.restart()
                 }
             }
         }
     }
 
+    /**
+     * Coupe ([paused] vrai) ou rétablit la liaison temps réel. Utilisé par l'éditeur :
+     * aucune trame ni requête Home Assistant n'est envoyée pendant la modification, et
+     * l'état reçu est rechargé à la reprise.
+     */
+    fun setLiveUpdatesPaused(paused: Boolean) {
+        if (livePaused == paused) return
+        livePaused = paused
+        if (paused) {
+            realtime.stop()
+        } else {
+            start()
+        }
+    }
+
     /** Démarre la session mémorisée, s'il y en a une. */
     fun start() {
+        if (livePaused) return
         if (_session.value == null) return
         scope.launch {
             ensureBaseUrl()
@@ -243,6 +277,7 @@ class HaController(
 
     fun disconnect() {
         val session = _session.value
+        livePaused = false
         realtime.stop()
         store.clear()
         _session.value = null
@@ -263,6 +298,7 @@ class HaController(
      */
     private fun expireSession() {
         val session = _session.value ?: return
+        livePaused = false
         realtime.stop()
         store.clear()
         _session.value = null
@@ -279,6 +315,22 @@ class HaController(
 
     fun reconnect() {
         start()
+    }
+
+    /**
+     * Relance la liaison immédiatement, sans attendre le prochain délai de reconnexion.
+     * Utilisé quand l'utilisateur touche une tuile hors ligne ou « Reconnecter ».
+     */
+    fun retryConnection() {
+        if (_session.value == null || livePaused) return
+        scope.launch {
+            ensureBaseUrl()
+            realtime.restart()
+        }
+    }
+
+    fun clearCommandLog() {
+        scope.launch { commandLog.clear() }
     }
 
     fun refreshLayout() {
@@ -515,12 +567,16 @@ class HaController(
                 call,
                 session.transport,
             )
-            if (result.isSuccess) return@launch
+            if (result.isSuccess) {
+                recordCommand(call, success = true)
+                return@launch
+            }
 
             val error = result.exceptionOrNull()
             if (error is HaHttpException && error.code == 401) {
                 val refreshed = refreshCredentials(force = true)
                 if (refreshed == null) {
+                    recordCommand(call, success = false)
                     _lastError.value = CommandError.Unauthorized
                     onFailure()
                     return@launch
@@ -531,6 +587,7 @@ class HaController(
                     call,
                     session.transport,
                 )
+                recordCommand(call, success = retry.isSuccess)
                 if (retry.isFailure) {
                     _lastError.value = CommandError.Server
                     onFailure()
@@ -538,6 +595,7 @@ class HaController(
                 return@launch
             }
 
+            recordCommand(call, success = false)
             _lastError.value = when (error) {
                 is HaHttpException -> CommandError.Server
                 is IOException -> CommandError.Network
@@ -545,6 +603,35 @@ class HaController(
             }
             onFailure()
         }
+    }
+
+    /** Ajoute la commande au journal local et à Logcat (`adb logcat -s HomeGlassCommands`). */
+    private suspend fun recordCommand(call: ServiceCall, success: Boolean) {
+        val entry = CommandLogEntry(
+            at = System.currentTimeMillis(),
+            service = "${call.domain}.${call.service}",
+            target = call.entityLabel(),
+            success = success,
+        )
+        Log.d(COMMAND_LOG_TAG, "${if (success) "OK" else "ÉCHEC"} ${entry.summary}")
+        commandLog.record(entry)
+    }
+
+    /** Entité visée, lue dans la cible puis dans les données de l'appel. */
+    private fun ServiceCall.entityLabel(): String? {
+        fun from(map: Map<String, JsonElement>): String? {
+            val element = map["entity_id"] ?: return null
+            return when (element) {
+                is JsonPrimitive -> element.contentOrNull?.takeIf(String::isNotBlank)
+                is JsonArray -> element
+                    .mapNotNull { (it as? JsonPrimitive)?.contentOrNull }
+                    .filter(String::isNotBlank)
+                    .joinToString(", ")
+                    .takeIf(String::isNotBlank)
+                else -> null
+            }
+        }
+        return from(target) ?: from(data)
     }
 
     private fun optimisticStateFor(state: EntityState): String = when (state.domain) {
@@ -558,5 +645,6 @@ class HaController(
     private companion object {
         /** ~150 ms : fluide au glissement, sans noyer Home Assistant. */
         const val LEVEL_THROTTLE_MILLIS = 150L
+        const val COMMAND_LOG_TAG = "HomeGlassCommands"
     }
 }

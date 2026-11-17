@@ -17,6 +17,8 @@ dependencyResolutionManagement {
     repositories {
         google()
         mavenCentral()
+        // GeckoView (moteur Firefox embarqué pour le Web Player Spotify).
+        maven { url = uri("https://maven.mozilla.org/maven2/") }
     }
 }
 

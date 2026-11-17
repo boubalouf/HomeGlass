@@ -7,6 +7,8 @@
     <string name="entity_state_on">Allumé</string>
     <string name="entity_state_off">Éteint</string>
     <string name="state_unavailable">Indisponible</string>
+    <string name="state_offline_since">Hors ligne depuis %1$s</string>
+    <string name="state_unknown">État inconnu</string>
     <string name="state_locked">Verrouillée</string>
     <string name="state_unlocked">Déverrouillée</string>
     <string name="state_open">Ouvert</string>
@@ -106,6 +108,11 @@
     <string name="settings_status_reconnecting">Reconnexion…</string>
     <string name="settings_status_failed">Hors ligne</string>
     <string name="settings_status_idle">Inactif</string>
+    <string name="settings_commands_log">Journal des commandes</string>
+    <string name="settings_commands_log_empty">Aucune commande envoyée.</string>
+    <string name="settings_commands_log_clear">Vider</string>
+    <string name="settings_commands_ok">OK</string>
+    <string name="settings_commands_failed">Échec</string>
     <string name="settings_disconnect">Se déconnecter</string>
     <string name="settings_reconnect">Reconnecter</string>
     <string name="settings_customize">Personnaliser l\'accueil</string>
@@ -245,4 +252,13 @@
     <string name="pair_code_too_many">Trop de tentatives. Relancez l\'appairage.</string>
     <string name="pair_server_unreachable">HomeGlass Server injoignable.</string>
     <string name="pair_not_server">Cette adresse ne répond pas comme un HomeGlass Server.</string>
+
+    <!-- Spotify -->
+    <string name="spotify_title">Spotify</string>
+    <string name="spotify_open_web">Ouvrir le Web Player</string>
+    <string name="spotify_web_player">Spotify Web Player</string>
+    <string name="spotify_web_back">Retour</string>
+    <string name="spotify_web_retry">Réessayer</string>
+    <string name="spotify_web_error">Impossible de charger le Web Player. Vérifiez la connexion, puis réessayez.</string>
+    <string name="widget_spotify">Spotify</string>
 </resources>

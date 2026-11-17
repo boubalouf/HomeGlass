@@ -11,7 +11,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalView
 
 /**
- * Garde l'écran allumé tant que [enabled] est vrai (lecture en cours).
+ * Garde l'écran allumé tant que [enabled] est vrai (interface vinyle affichée).
  *
  * La fenêtre est libérée au démontage du composable : quitter l'appli ou fermer le lecteur
  * rend la veille automatique à Android.

@@ -21,6 +21,8 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.Refresh
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -95,7 +97,9 @@ fun TileShell(
             .combinedClickable(
                 interactionSource = interactionSource,
                 indication = null, // pas de ripple Material : le retour visuel est l'échelle + la teinte
-                enabled = available,
+                // Une tuile hors ligne reste cliquable : son appui relance la liaison
+                // (voir AppRoot) plutôt que de laisser l'utilisateur sans action.
+                enabled = true,
                 onClick = {
                     haptics.tap()
                     onClick()
@@ -163,7 +167,6 @@ fun DeviceTile(
     )
 
     val a11yDescription = stringResource(R.string.a11y_tile_description, model.name, model.stateText)
-    val unavailableLabel = stringResource(R.string.state_unavailable)
 
     TileShell(
         active = model.isActive && model.isAvailable,
@@ -172,7 +175,7 @@ fun DeviceTile(
         onLongClick = onLongClick,
         modifier = modifier.semantics(mergeDescendants = true) {
             contentDescription = a11yDescription
-            if (!model.isAvailable) stateDescription = unavailableLabel
+            if (!model.isAvailable) stateDescription = model.stateText
         },
         overlay = backgroundOverlay,
     ) {
@@ -278,6 +281,15 @@ fun DeviceTile(
                         )
                     }
                 }
+            }
+
+            if (!model.isAvailable) {
+                Icon(
+                    imageVector = Icons.Rounded.Refresh,
+                    contentDescription = stringResource(R.string.action_retry),
+                    tint = textColor.copy(alpha = 0.7f),
+                    modifier = Modifier.align(Alignment.TopEnd).size(16.dp),
+                )
             }
         }
     }

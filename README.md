@@ -41,11 +41,18 @@ Assistant « **HomeGlass Server** » (Python, FastAPI) vit dans un dépôt sépa
   nom et une pastille d'icône décorative pour occuper l'espace.
 - **Ouvre un lecteur plein écran** dès qu'une enceinte démarre (pochette, titre, artiste,
   lecture/pause, piste suivante/précédente, volume), en mode paysage.
+- **Web Player Spotify intégré** : une case au logo Spotify ouvre `open.spotify.com` en
+  plein écran dans l'application, avec la session conservée d'une ouverture à l'autre. Le
+  même accès est disponible depuis le lecteur vinyle et les Réglages. Aucun Client ID ni
+  API Spotify : tout se passe dans la page web.
 - **Rallume l'écran au passage d'une personne** : capteur de proximité (seuil, anti-rebond
   et journal dans les Réglages). Le réveil par caméra frontale est amorcé mais pas encore
   actif — voir les limites connues dans [Spécificité.md](Spécificité.md).
 - **Se connecte de trois façons** : appairage par code avec l'add-on (recommandé), jeton
   d'accès longue durée, ou OAuth2/PKCE (optionnel, voir plus bas).
+- **Aide au diagnostic** : un journal local des dernières commandes envoyées (heure,
+  service, entité, succès ou échec) est visible dans Réglages ; les tuiles hors ligne
+  indiquent depuis quand et relancent la connexion d'un appui.
 
 ---
 
@@ -164,9 +171,64 @@ Le bouton **Modifier** ouvre un éditeur plein écran :
 - **Enregistrer** conserve la disposition ; **Tableau généré** revient à la page produite
   automatiquement par Home Assistant.
 
+Pendant l'édition, les relevés Home Assistant sont suspendus (aucune requête ne vient
+modifier le canevas) et le brouillon survit à une recréation d'activité. L'écran suit le
+délai de veille de la tablette, comme partout sauf sur l'interface vinyle.
+Les panneaux superposés absorbent les appuis : une zone vide de l'éditeur ou du Web Player
+ne peut pas toucher une case du tableau en dessous.
+
 La grille compte 2, 3 ou 4 colonnes selon la largeur disponible. L'éditeur utilise
 l'instantané de la disposition pris à son ouverture : les mises à jour d'état Home
 Assistant ne réinitialisent pas le travail en cours.
+
+---
+
+## Spotify (Web Player intégré)
+
+L'application n'utilise ni OAuth Spotify, ni Client ID, ni l'API Web : un appui sur la case
+**Spotify** de l'accueil (ou sur le logo Spotify du lecteur plein écran) ouvre
+`open.spotify.com` dans une fenêtre plein écran, à l'intérieur de l'application. La page est
+rendue par **GeckoView**, le moteur de Firefox embarqué : c'est le seul moteur Android qui
+permet la lecture des contenus protégés (Widevine) de Spotify, la WebView système en étant
+incapable. La connexion au compte se fait une seule fois dans cette fenêtre ; la session est
+conservée d'une ouverture à l'autre. Rien n'est lu automatiquement : une piste ne démarre
+que sur un appui dans la page.
+
+### Fonctionnalités
+
+- case **Spotify** dans l'éditeur d'accueil : logo Spotify, un appui ouvre le Web Player ;
+- même accès depuis le bouton Spotify du lecteur vinyle et depuis Réglages ;
+- **bibliothèque complète** (playlists, titres likés, artistes) : la page est servie en
+  version de bureau, la version mobile remplaçant la bibliothèque par une invite
+  d'installation de l'application ;
+- retour vers le tableau de bord HomeGlass (le bouton ne remonte pas l'historique Spotify),
+  barre de chargement et message d'erreur avec « Réessayer » ;
+- lecture du Web Player, enceintes Spotify Connect incluses, sans quitter l'application ;
+- la fenêtre n'impose pas l'écran allumé : la tablette suit son délai de veille et la
+  fenêtre est restaurée au réveil ; seule l'interface vinyle maintient l'écran allumé ;
+- le clavier du formulaire de connexion ne recouvre pas les champs.
+
+### Configuration
+
+Aucune clé : il suffit d'un accès Internet et d'un compte Spotify pour se connecter dans la
+page. Le moteur est tiré depuis `maven.mozilla.org` (artefact `geckoview-arm64-v8a`) ; il
+ajoute une centaine de mégaoctets à l'APK (le debug atteint ~225 Mo, la release minifiée est
+plus légère). Le profil GeckoView est propre à l'application : la session Spotify ne partage
+pas les cookies de Firefox. L'User-Agent de bureau est écrit dans la préférence moteur
+`general.useragent.override` (GeckoView `about:config`), et non dans la session : l'override
+de session déclenche un préflight CORS contenant `User-Agent`, refusé par Spotify (bug
+GeckoView), ce qui casse les pochettes et l'API de lecture.
+
+### Limites à connaître
+
+- **ARM64 uniquement** : l'artefact GeckoView ajouté ne contient que les bibliothèques
+  `arm64-v8a` (la tablette cible). Une version x86/armv7 demanderait l'artefact universel.
+- La session vit dans le **profil GeckoView** ; « Se déconnecter » se fait depuis le
+  Web Player.
+- La lecture fait sortir le son de la **tablette** (ou d'une enceinte choisie dans Connect,
+  comme dans Firefox) ; il n'y a plus de télécommande Connect native.
+- Sans réseau, la page ne charge pas ; le bouton « Réessayer » recharge `open.spotify.com`.
+- Spotify peut demander un compte **Premium** pour la lecture intégrale.
 
 ---
 

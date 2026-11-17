@@ -9,6 +9,7 @@ import androidx.compose.material.icons.rounded.CameraAlt
 import androidx.compose.material.icons.rounded.CleaningServices
 import androidx.compose.material.icons.rounded.DevicesOther
 import androidx.compose.material.icons.rounded.Lightbulb
+import androidx.compose.material.icons.rounded.MusicNote
 import androidx.compose.material.icons.rounded.Image
 import androidx.compose.material.icons.rounded.Lock
 import androidx.compose.material.icons.rounded.PowerSettingsNew
@@ -20,6 +21,9 @@ import androidx.compose.material.icons.rounded.Title
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import com.homeglass.app.ui.theme.GlassColors
+
+/** Vert de la marque Spotify, utilisé par la case et le widget. */
+val SpotifyGreen = Color(0xFF1DB954)
 
 /** Icône et couleur par défaut de chaque catégorie du design system. */
 object TileVisuals {
@@ -41,6 +45,7 @@ object TileVisuals {
         TileCategory.Photo -> Icons.Rounded.Image
         TileCategory.Calendar -> Icons.Rounded.CalendarMonth
         TileCategory.Title -> Icons.Rounded.Title
+        TileCategory.Spotify -> Icons.Rounded.MusicNote
     }
 
     /**
@@ -64,5 +69,6 @@ object TileVisuals {
         TileCategory.Photo -> colors.categoryCool
         TileCategory.Calendar -> colors.accent
         TileCategory.Title -> colors.accent
+        TileCategory.Spotify -> SpotifyGreen
     }
 }

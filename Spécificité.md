@@ -110,6 +110,7 @@ com.homeglass.app
 │   ├── tiles/                 FreeTileGrid, DeviceTile, LightTile, CoverTile, MediaTile,
 │   │                          SensorTile, ClockTile, PhotoTile, CalendarTile, MediaControls…
 │   ├── media/                 lecteur plein écran et déclencheur « now playing »
+│   ├── web/                   SpotifyWebScreen (Web Player intégré)
 │   ├── detail/                MoreInfoSheet, ColorWheel
 │   ├── custom/                éditeur du tableau de bord personnel
 │   ├── welcome/               écran de bienvenue / connexion / appairage
@@ -624,6 +625,27 @@ ignorée : l'accueil continue de s'afficher après une modification côté Home 
   forcé) ; le canevas reprend le dégradé de fond.
 - **Actions** : « Enregistrer » sauvegarde la grille ; « Tableau généré » efface le tableau
   personnel et rend la main à la génération automatique.
+- **Édition stable** : la liaison temps réel est coupée pendant l'édition
+  (`HaController.setLiveUpdatesPaused`) et le brouillon (positions, renommages) est
+  sauvegardé par `rememberSaveable`, donc une recréation d'activité ne referme pas
+  l'éditeur et ne perd pas les modifications. Seule l'interface vinyle maintient l'écran
+  allumé (`KeepScreenOn`) ; l'éditeur et le Web Player suivent le délai de veille.
+- **Appuis cloisonnés** : l'éditeur et le Web Player consomment les touches de leurs zones
+  vides (`Modifier.consumeTouches()`) ; un appui ne traverse plus vers les cases du tableau
+  en dessous (une lumière ne peut plus s'éteindre par accident).
+
+### 10.3 Diagnostic local
+
+- **Journal des commandes** : `CommandLogStore` (DataStore `homeglass_commands`) conserve
+  les 50 dernières commandes envoyées (heure, service, entité, succès/échec). Les commandes
+  identiques à moins d'une seconde sont fusionnées pour ne pas noyer un glissement de
+  curseur. `HaController.recordCommand` écrit aussi une ligne Logcat (tag
+  `HomeGlassCommands`). Réglages affiche les six dernières et permet de vider le journal.
+- **Tuile hors ligne** : le texte devient « Hors ligne depuis 14:32 » (ou depuis le jour
+  concerné), avec une icône de rafraîchissement. Un appui relance la liaison
+  (`HaController.retryConnection`) sans envoyer de service ; le reste de la tuile est
+  désactivé. Cela distingue une panne de l'appli d'une entité qui a décroché côté Home
+  Assistant.
 
 ---
 
@@ -638,6 +660,43 @@ ignorée : l'accueil continue de s'afficher après une modification côté Home 
   progression, lecture/pause, piste précédente/suivante, volume ; plusieurs départs
   simultanés → priorité à l'enceinte qui a un titre identifié.
 - Plein écran paysage, `keepScreenOn`, retour par bouton ou geste.
+
+### 11.1 Spotify (Web Player intégré)
+
+L'intégration est un **navigateur intégré** : aucune API Spotify, aucun OAuth, aucun Client
+ID. La case Spotify et le bouton du lecteur vinyle ouvrent `open.spotify.com` dans une
+fenêtre plein écran, avec une barre « Spotify Web Player ». Le retour ferme la fenêtre et
+revient au tableau de bord HomeGlass (il ne remonte pas l'historique Spotify).
+
+```text
+ui/web/SpotifyWebScreen.kt   GeckoView, barre, session, erreur et reprise
+ui/tiles/SpotifyTile.kt      case logo (WidgetKind.Spotify, locale)
+res/drawable/ic_spotify.xml  logo vectoriel
+```
+
+**GeckoView** — la page est rendue par le **moteur Firefox embarqué** (`geckoview-arm64-v8a`,
+~90 Mo, dépôt `maven.mozilla.org`). C'est indispensable : la WebView d'Android n'a pas de
+chaîne DRM/codecs exploitable par Spotify (« la lecture de contenus protégés est
+désactivée »). GeckoView lit le Web Player comme Firefox. Le `PermissionDelegate` accorde
+`PERMISSION_MEDIA_KEY_SYSTEM_ACCESS` (Widevine) et refuse les autres permissions de site ;
+les permissions Android sont accordées. Le profil par défaut du moteur conserve les cookies
+et la connexion d'une ouverture à l'autre. Le clavier est repoussé par `imePadding` pour ne
+pas recouvrir le formulaire.
+
+**Version de bureau** — la session et la vue utilisent le mode bureau, et l'User-Agent est
+posé par la préférence `general.useragent.override` (`GeckoPreferenceController`, runtime
+avec `aboutConfigEnabled`). La version mobile du Web Player remplace « Bibliothèque » par
+une invite « Installez l'appli » ; le mode bureau donne la bibliothèque complète. L'override
+d'User-Agent de session est proscrit : il ajoute un en-tête `User-Agent` aux préflights CORS
+que Spotify refuse (bug GeckoView 1629921), ce qui casse pochettes et lecture.
+
+**Lecture** — aucune piste ne démarre sans geste dans la page. Le son sort de la tablette
+ou d'une enceinte choisie dans Connect, comme dans Firefox ; ce n'est plus une télécommande
+Spotify Connect native.
+
+**Case Spotify** — logo et « Ouvrir le Web Player », deux colonnes par défaut ; entièrement
+locale (`WidgetKind.Spotify`), sans entité Home Assistant. Le lecteur vinyle ajoute un bouton
+Spotify à côté de la fermeture, et Réglages un bouton « Spotify ».
 
 ---
 
@@ -1010,6 +1069,13 @@ actuellement (140 tests, 0 échec) et l'APK s'installe sur la tablette de test.
 10. **Grandes dispositions réservées au 2 × 2** : la grande case média (pochette +
     commandes) et la grande case capteur (valeur géante + pastille) ne s'activent qu'à
     partir de 2 colonnes × 2 rangées ; en dessous, la tuile garde sa disposition compacte.
+11. **Spotify dépend de GeckoView** : la fenêtre charge `open.spotify.com` via le moteur
+    Firefox embarqué, indispensable pour le DRM (la WebView système ne lit pas Spotify).
+    L'APK ne contient que l'ABI `arm64-v8a` et grossit d'environ 90 Mo ; les mises à jour de
+    l'interface Spotify s'appliquent sans mise à jour de l'application.
+12. **Spotify joue sur la tablette** : le Web Player n'est pas une télécommande Connect ;
+    lancer une lecture fait sortir le son de l'appareil (ou de l'enceinte choisie dans
+    Connect), et un compte Premium peut être demandé (voir §11.1).
 
 ---
 

@@ -14,6 +14,7 @@ import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -35,6 +36,7 @@ import com.homeglass.app.data.ha.CommandError
 import com.homeglass.app.data.ha.HaController
 import com.homeglass.app.data.ha.LoginResult
 import com.homeglass.app.domain.dashboard.CustomDashboard
+import com.homeglass.app.domain.ha.CommandLogEntry
 import com.homeglass.app.domain.ha.ConnectionStatus
 import com.homeglass.app.domain.ha.EntityState
 import com.homeglass.app.domain.ha.HaSession
@@ -72,7 +74,9 @@ import com.homeglass.app.ui.tiles.LocalMediaControls
 import com.homeglass.app.ui.tiles.MediaControlHandlers
 import com.homeglass.app.ui.tiles.TileAction
 import com.homeglass.app.ui.tiles.TileCategory
+import com.homeglass.app.ui.tiles.LocalSpotifyOpen
 import com.homeglass.app.ui.tiles.TileUiModel
+import com.homeglass.app.ui.web.SpotifyWebScreen
 import com.homeglass.app.ui.welcome.WelcomeScreen
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -95,6 +99,7 @@ fun HomeGlassApp(
     val layoutState by controller.layoutRepository.state.collectAsState()
     val states by controller.states.collectAsState()
     val commandError by controller.lastError.collectAsState()
+    val commands by controller.commands.collectAsState(initial = emptyList())
     val loginResult by controller.loginResult.collectAsState()
 
     val layout = when (val current = layoutState) {
@@ -107,7 +112,17 @@ fun HomeGlassApp(
     val context = LocalContext.current
     val customStore = remember { CustomDashboardStore(context.applicationContext) }
     val customDashboard by customStore.dashboard.collectAsState(initial = CustomDashboard())
-    var showCustomizer by remember { mutableStateOf(false) }
+    // Conservés dans l'état sauvegardé : une recréation d'activité (veille, changement de
+    // configuration) ne doit pas refermer l'éditeur ou la fenêtre Spotify en cours.
+    var showCustomizer by rememberSaveable { mutableStateOf(false) }
+
+    // Spotify : le Web Player s'ouvre en fenêtre plein écran, la case et le lecteur
+    // vinyle y mènent tous les deux.
+    var showSpotify by rememberSaveable { mutableStateOf(false) }
+    val openSpotify: () -> Unit = remember { { showSpotify = true } }
+    // Vrai quand le lecteur vinyle est affiché : c'est le seul écran qui empêche la
+    // veille de la tablette (ni l'accueil, ni l'éditeur, ni le Web Player Spotify).
+    var keepAwakeForVinyl by remember { mutableStateOf(false) }
     // Instantané pris à l'ouverture de l'éditeur : les mises à jour d'état Home Assistant
     // ne doivent pas réinitialiser le canevas en cours de modification.
     var editorSeed by remember { mutableStateOf<List<TileUiModel>>(emptyList()) }
@@ -143,7 +158,25 @@ fun HomeGlassApp(
         }
     }
 
+    // Pendant l'édition, la liaison temps réel est coupée : les relevés Home Assistant ne
+    // viennent plus modifier le canevas ni relancer des requêtes sous l'éditeur. Elle est
+    // rétablie à la fermeture (ou à l'enregistrement).
+    LaunchedEffect(showCustomizer) {
+        controller.setLiveUpdatesPaused(showCustomizer)
+    }
+
+    // Après une recréation d'activité, l'instantané de l'éditeur a disparu alors que
+    // `showCustomizer` est restauré : on le reprend du tableau courant pour ne pas ouvrir
+    // un canevas vide.
+    LaunchedEffect(showCustomizer, editorTiles) {
+        if (showCustomizer && editorSeed.isEmpty()) editorSeed = editorTiles
+    }
+
     HomeGlassTheme(config = themeConfig) {
+        // Seule l'interface vinyle maintient l'écran allumé. Partout ailleurs (accueil,
+        // éditeur, Web Player Spotify), la tablette suit son propre délai de veille.
+        KeepScreenOn(enabled = keepAwakeForVinyl)
+
         CompositionLocalProvider(
             LocalMediaArtworkBaseUrl provides artworkBaseUrl,
             LocalMediaControls provides MediaControlHandlers(
@@ -151,6 +184,7 @@ fun HomeGlassApp(
                 next = controller::mediaNext,
                 previous = controller::mediaPrevious,
             ),
+            LocalSpotifyOpen provides openSpotify,
         ) {
             val currentSession = session
             if (currentSession == null) {
@@ -171,7 +205,10 @@ fun HomeGlassApp(
                     status = status,
                     states = states,
                     commandError = commandError,
+                    commands = commands,
                     onDismissError = controller::clearError,
+                    onClearCommands = controller::clearCommandLog,
+                    onVinylVisible = { visible -> keepAwakeForVinyl = visible },
                     customDashboard = customDashboard,
                     onCustomize = {
                         // Sans layout chargé, l'éditeur n'aurait rien à montrer : on évite
@@ -181,9 +218,14 @@ fun HomeGlassApp(
                             showCustomizer = true
                         }
                     },
+                    onOpenSpotify = openSpotify,
                 )
 
-                if (showCustomizer) {
+                if (showSpotify) {
+                    SpotifyWebScreen(onClose = { showSpotify = false })
+                }
+
+                if (showCustomizer && editorSeed.isNotEmpty()) {
                     CustomDashboardScreen(
                         initialTiles = editorSeed,
                         availableTiles = availableTiles,
@@ -194,6 +236,7 @@ fun HomeGlassApp(
                         onDismiss = { showCustomizer = false },
                     )
                 }
+
             }
         }
     }
@@ -208,9 +251,13 @@ private fun MainShell(
     status: ConnectionStatus,
     states: Map<String, EntityState>,
     commandError: CommandError?,
+    commands: List<CommandLogEntry>,
     onDismissError: () -> Unit,
+    onClearCommands: () -> Unit,
+    onVinylVisible: (Boolean) -> Unit,
     customDashboard: CustomDashboard,
     onCustomize: () -> Unit,
+    onOpenSpotify: () -> Unit,
 ) {
     val rooms: List<RoomUi> = layout?.toRoomsUi(states).orEmpty()
     // L'éditeur propose toutes les entités : les tuiles des pièces complètent celles de
@@ -250,7 +297,10 @@ private fun MainShell(
     }
 
     val onTileTap: (TileUiModel) -> Unit = { tile ->
-        when (val action = tile.tap) {
+        if (!tile.isAvailable && tile.entityId != null) {
+            // Tuile hors ligne : l'appui relance la liaison au lieu de ne rien faire.
+            controller.retryConnection()
+        } else when (val action = tile.tap) {
             TileAction.Toggle -> {
                 // Une enceinte ne s'éteint pas quand on la touche : la tuile met en pause.
                 if (tile.category == TileCategory.Media) {
@@ -260,7 +310,9 @@ private fun MainShell(
                 }
             }
 
-            TileAction.MoreInfo, TileAction.None -> openInfo(tile)
+            TileAction.MoreInfo, TileAction.None -> {
+                if (tile.category == TileCategory.Spotify) onOpenSpotify() else openInfo(tile)
+            }
             is TileAction.CallService -> controller.callService(action.service, action.data, action.target)
             is TileAction.Navigate -> selectedTabId = tabs.firstOrNull { it.type == TabType.Rooms }?.id
         }
@@ -338,8 +390,14 @@ private fun MainShell(
     val nowPlaying = nowPlayingId?.let { states[it] }
     val infoState = infoEntityId?.let { states[it] }
 
-    // La tablette reste allumée tant qu'une enceinte joue, et le mode vinyle passe en paysage.
-    KeepScreenOn(enabled = states.values.any { it.state == "playing" })
+    // Tant que l'interface vinyle est affichée, l'écran reste allumé ; on la referme et la
+    // tablette reprend son délai de veille. Le mode vinyle passe en paysage.
+    LaunchedEffect(nowPlaying?.entityId) {
+        onVinylVisible(nowPlaying != null)
+    }
+    DisposableEffect(Unit) {
+        onDispose { onVinylVisible(false) }
+    }
     LockLandscape(enabled = nowPlaying != null)
 
     GlassHazeHost {
@@ -355,6 +413,7 @@ private fun MainShell(
                     onNext = { controller.mediaNext(nowPlaying.entityId) },
                     onPrevious = { controller.mediaPrevious(nowPlaying.entityId) },
                     onVolume = { level -> controller.setVolume(nowPlaying.entityId, level) },
+                    onOpenSpotify = onOpenSpotify,
                 )
             } else {
                 Box(Modifier.fillMaxSize().glassHazeSource()) {
@@ -372,9 +431,12 @@ private fun MainShell(
                         TabType.Settings -> SettingsScreen(
                             session = session,
                             status = status,
+                            commands = commands,
                             onDisconnect = controller::disconnect,
-                            onReconnect = controller::reconnect,
+                            onReconnect = controller::retryConnection,
+                            onClearCommands = onClearCommands,
                             onCustomize = onCustomize,
+                            onOpenSpotify = onOpenSpotify,
                         )
 
                         else -> HomeScreen(

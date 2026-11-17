@@ -46,6 +46,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
 import com.homeglass.app.R
@@ -54,6 +55,7 @@ import com.homeglass.app.data.presence.PresenceStore
 import com.homeglass.app.domain.presence.PresenceEntry
 import com.homeglass.app.domain.presence.PresenceSource
 import com.homeglass.app.domain.presence.PresenceTuning
+import com.homeglass.app.domain.ha.CommandLogEntry
 import com.homeglass.app.domain.ha.ConnectionStatus
 import com.homeglass.app.domain.ha.HaSession
 import com.homeglass.app.ui.home.GlassPillButton
@@ -70,9 +72,12 @@ import kotlinx.coroutines.launch
 fun SettingsScreen(
     session: HaSession,
     status: ConnectionStatus,
+    commands: List<CommandLogEntry>,
     onDisconnect: () -> Unit,
     onReconnect: () -> Unit,
+    onClearCommands: () -> Unit,
     onCustomize: () -> Unit,
+    onOpenSpotify: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val colors = GlassTheme.colors
@@ -125,9 +130,18 @@ fun SettingsScreen(
         )
 
         Spacer(Modifier.height(20.dp))
+        CommandJournal(entries = commands, onClear = onClearCommands)
+
+        Spacer(Modifier.height(20.dp))
         GlassPillButton(
             text = stringResource(R.string.settings_customize),
             onClick = onCustomize,
+        )
+
+        Spacer(Modifier.height(12.dp))
+        GlassPillButton(
+            text = stringResource(R.string.spotify_title),
+            onClick = onOpenSpotify,
         )
 
         Spacer(Modifier.height(24.dp))
@@ -137,6 +151,94 @@ fun SettingsScreen(
         Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
             GlassPillButton(text = stringResource(R.string.settings_reconnect), onClick = onReconnect)
             GlassPillButton(text = stringResource(R.string.settings_disconnect), onClick = onDisconnect)
+        }
+    }
+}
+
+/**
+ * Journal local des commandes envoyées à Home Assistant : heure, service, entité et
+ * résultat. Il permet de distinguer une action de l'application d'un changement venu de
+ * Home Assistant (extinction d'une lumière, par exemple).
+ */
+@Composable
+private fun CommandJournal(entries: List<CommandLogEntry>, onClear: () -> Unit) {
+    val colors = GlassTheme.colors
+    val typography = GlassTheme.typography
+    val context = LocalContext.current
+    val timeFormat = remember(context) { DateFormat.getTimeFormat(context) }
+
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Text(
+            text = stringResource(R.string.settings_commands_log),
+            style = typography.tileName,
+            color = colors.screenTextPrimary,
+        )
+        if (entries.isNotEmpty()) {
+            Text(
+                text = stringResource(R.string.settings_commands_log_clear),
+                style = typography.caption,
+                color = colors.accent,
+                modifier = Modifier
+                    .clip(GlassTheme.shapes.pill)
+                    .clickable(
+                        interactionSource = remember { MutableInteractionSource() },
+                        indication = null,
+                        onClick = onClear,
+                    )
+                    .padding(horizontal = 10.dp, vertical = 6.dp),
+            )
+        }
+    }
+
+    if (entries.isEmpty()) {
+        Text(
+            text = stringResource(R.string.settings_commands_log_empty),
+            style = typography.caption,
+            color = colors.screenTextSecondary,
+        )
+        return
+    }
+
+    entries.take(6).forEach { entry ->
+        Row(
+            modifier = Modifier.fillMaxWidth().padding(vertical = 3.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Text(
+                text = timeFormat.format(Date(entry.at)),
+                style = typography.caption,
+                color = colors.screenTextSecondary,
+                modifier = Modifier.weight(0.22f),
+            )
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = entry.service,
+                    style = typography.caption,
+                    color = colors.screenTextPrimary,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+                entry.target?.let { target ->
+                    Text(
+                        text = target,
+                        style = typography.caption,
+                        color = colors.screenTextSecondary,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                }
+            }
+            Text(
+                text = stringResource(
+                    if (entry.success) R.string.settings_commands_ok else R.string.settings_commands_failed,
+                ),
+                style = typography.caption,
+                color = if (entry.success) colors.categorySecure else colors.categoryDanger,
+            )
         }
     }
 }

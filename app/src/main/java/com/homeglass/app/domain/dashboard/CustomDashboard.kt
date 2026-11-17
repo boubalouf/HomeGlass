@@ -101,7 +101,7 @@ data class CustomDashboard(
             PlacedTile(
                 id = widget.id,
                 widget = widget.normalized(),
-                spanX = if (widget.kind == WidgetKind.Photo) 2 else 1,
+                spanX = if (widget.kind == WidgetKind.Photo || widget.kind == WidgetKind.Spotify) 2 else 1,
             )
         }
         return DashboardLayout.autoPlace(fromSections + fromWidgets)
@@ -121,7 +121,7 @@ data class CustomDashboard(
 
         /** Nouvelle case décorative, au premier emplacement libre. */
         fun widgetTile(kind: WidgetKind, current: List<PlacedTile>): PlacedTile {
-            val spanX = if (kind == WidgetKind.Photo) 2 else 1
+            val spanX = if (kind == WidgetKind.Photo || kind == WidgetKind.Spotify) 2 else 1
             val spot = DashboardLayout.firstFree(current, spanX, 1) ?: (0 to 0)
             return PlacedTile(
                 id = "widget_${kind.name}_${System.currentTimeMillis()}",

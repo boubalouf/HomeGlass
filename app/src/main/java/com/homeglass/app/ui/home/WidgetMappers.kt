@@ -15,12 +15,16 @@ import com.homeglass.app.ui.tiles.TileUiModel
  * défaut pour rester lisible ; l'éditeur peut librement changer portée et position.
  */
 fun WidgetItem.toTileUiModel(): TileUiModel {
-    // Une photo occupe deux colonnes ; un titre reste sur une cellule pour pouvoir se
-    // glisser entre deux tuiles, puis être élargi si besoin.
-    val defaultSpanX = if (kind == WidgetKind.Photo) 2 else 1
+    // Une photo et la case Spotify occupent deux colonnes ; un titre reste sur une cellule
+    // pour pouvoir se glisser entre deux tuiles, puis être élargi si besoin.
+    val defaultSpanX = if (kind == WidgetKind.Photo || kind == WidgetKind.Spotify) 2 else 1
     return TileUiModel(
         id = id,
-        name = if (kind == WidgetKind.Title) text else "",
+        name = when (kind) {
+            WidgetKind.Title -> text
+            WidgetKind.Spotify -> "Spotify"
+            else -> ""
+        },
         stateText = "",
         category = kind.toCategory(),
         size = if (defaultSpanX == 2) TileSize.Wide else TileSize.Small,
@@ -46,6 +50,7 @@ fun WidgetKind.toCategory(): TileCategory = when (this) {
     WidgetKind.Photo -> TileCategory.Photo
     WidgetKind.Calendar -> TileCategory.Calendar
     WidgetKind.Title -> TileCategory.Title
+    WidgetKind.Spotify -> TileCategory.Spotify
 }
 
 /** Type de case décorative correspondant à une catégorie, `null` pour une entité. */
@@ -54,5 +59,6 @@ fun TileCategory.toWidgetKind(): WidgetKind? = when (this) {
     TileCategory.Photo -> WidgetKind.Photo
     TileCategory.Calendar -> WidgetKind.Calendar
     TileCategory.Title -> WidgetKind.Title
+    TileCategory.Spotify -> WidgetKind.Spotify
     else -> null
 }

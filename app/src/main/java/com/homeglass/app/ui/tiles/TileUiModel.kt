@@ -32,11 +32,12 @@ enum class TileCategory {
     Scene,
     Generic,
 
-    /** Cases décoratives locales, sans entité Home Assistant. */
+    /** Cases locales, sans entité Home Assistant. */
     Clock,
     Photo,
     Calendar,
     Title,
+    Spotify,
 }
 
 /** Mode de présentation demandé par la configuration de la tuile. */
@@ -104,5 +105,6 @@ data class TileUiModel(
         get() = category == TileCategory.Clock ||
             category == TileCategory.Photo ||
             category == TileCategory.Calendar ||
-            category == TileCategory.Title
+            category == TileCategory.Title ||
+            category == TileCategory.Spotify
 }

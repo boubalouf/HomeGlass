@@ -74,6 +74,7 @@ fun EntityTile(
             modifier = modifier,
         )
 
+        TileCategory.Spotify -> SpotifyTile(model = model, modifier = modifier)
 
         // Switch, climate, lock, alarm, camera, vacuum, generic : disposition standard.
         else -> DeviceTile(

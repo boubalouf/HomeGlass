@@ -12,7 +12,8 @@ enum class WidgetKind {
     @SerialName("clock") Clock,
     @SerialName("photo") Photo,
     @SerialName("calendar") Calendar,
-    @SerialName("title") Title;
+    @SerialName("title") Title,
+    @SerialName("spotify") Spotify;
 
     /** Thèmes proposés par l'éditeur, dans l'ordre d'affichage. Le premier est le défaut. */
     val themes: List<String>
@@ -21,6 +22,7 @@ enum class WidgetKind {
             Photo -> listOf(PHOTO_COVER, PHOTO_SOFT)
             Calendar -> listOf(CALENDAR_MINIMAL, CALENDAR_WEEK, CALENDAR_FOCUS)
             Title -> listOf(TITLE_PLAIN)
+            Spotify -> listOf(SPOTIFY_DEFAULT)
         }
 
     val defaultTheme: String get() = themes.first()
@@ -31,7 +33,7 @@ enum class WidgetKind {
     companion object {
         /** Types proposés dans la palette. `Title` n'est conservé que pour relire
          *  d'anciens tableaux ; il n'est plus créé ni affiché. */
-        val addable: List<WidgetKind> get() = listOf(Clock, Photo, Calendar)
+        val addable: List<WidgetKind> get() = listOf(Clock, Photo, Calendar, Spotify)
 
         const val CLOCK_CLASSIC = "classic"
         const val CLOCK_MINIMAL = "minimal"
@@ -42,6 +44,7 @@ enum class WidgetKind {
         const val CALENDAR_WEEK = "week"
         const val CALENDAR_FOCUS = "focus"
         const val TITLE_PLAIN = "plain"
+        const val SPOTIFY_DEFAULT = "default"
     }
 }
 

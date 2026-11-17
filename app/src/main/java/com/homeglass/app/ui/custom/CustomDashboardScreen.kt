@@ -9,6 +9,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectDragGestures
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -37,6 +38,7 @@ import androidx.compose.material.icons.rounded.Add
 import androidx.compose.material.icons.rounded.CalendarMonth
 import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material.icons.rounded.Image
+import androidx.compose.material.icons.rounded.MusicNote
 import androidx.compose.material.icons.rounded.OpenInFull
 import androidx.compose.material.icons.rounded.Schedule
 import androidx.compose.material.icons.rounded.Title
@@ -47,6 +49,8 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.saveable.listSaver
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -69,6 +73,7 @@ import com.homeglass.app.domain.dashboard.DashboardLayout
 import com.homeglass.app.domain.dashboard.PlacedTile
 import com.homeglass.app.domain.dashboard.WidgetItem
 import com.homeglass.app.domain.dashboard.WidgetKind
+import com.homeglass.app.ui.components.consumeTouches
 import com.homeglass.app.ui.home.GlassPillButton
 import com.homeglass.app.ui.home.storedLabel
 import com.homeglass.app.ui.home.toPlacedTile
@@ -81,6 +86,9 @@ import com.homeglass.app.ui.tiles.TileUiModel
 import com.homeglass.app.ui.tiles.freeColumnsFor
 import kotlin.math.roundToInt
 import kotlinx.coroutines.launch
+
+/** Champs sauvegardés par case dans le brouillon de l'éditeur. */
+private const val DRAFT_FIELDS = 6
 
 /**
  * Éditeur du tableau de bord personnel.
@@ -109,7 +117,42 @@ fun CustomDashboardScreen(
     // cours (la case revenait à sa place d'origine, voire à la disposition par défaut).
     // `initialTiles` est un instantané fixé à l'ouverture (voir AppRoot) : l'état ci-dessous
     // ne se réinitialise donc plus à chaque relevé d'état.
-    var tiles by remember { mutableStateOf(seedPositions(initialTiles)) }
+    // Le brouillon survit à une recréation d'activité : les positions et les renommages en
+    // cours ne repartent pas de zéro si le système recrée l'écran pendant l'édition.
+    val tileCatalog = remember(initialTiles, availableTiles) {
+        (initialTiles + availableTiles).distinctBy { it.id }.associateBy { it.id }
+    }
+    val draftSaver = remember(tileCatalog) {
+        listSaver<List<TileUiModel>, String>(
+            save = { list ->
+                list.flatMap { tile ->
+                    listOf(
+                        tile.id,
+                        tile.name,
+                        tile.spanX.toString(),
+                        tile.spanY.toString(),
+                        tile.gridCol?.toString().orEmpty(),
+                        tile.gridRow?.toString().orEmpty(),
+                    )
+                }
+            },
+            restore = { flat ->
+                flat.chunked(DRAFT_FIELDS).mapNotNull { row ->
+                    val base = tileCatalog[row[0]] ?: return@mapNotNull null
+                    base.copy(
+                        name = row[1],
+                        spanX = row[2].toIntOrNull() ?: base.spanX,
+                        spanY = row[3].toIntOrNull() ?: base.spanY,
+                        gridCol = row[4].toIntOrNull(),
+                        gridRow = row[5].toIntOrNull(),
+                    )
+                }
+            },
+        )
+    }
+    var tiles by rememberSaveable(stateSaver = draftSaver) {
+        mutableStateOf(seedPositions(initialTiles))
+    }
     var query by remember { mutableStateOf("") }
     var selectedId by remember { mutableStateOf<String?>(null) }
 
@@ -163,7 +206,10 @@ fun CustomDashboardScreen(
         .sortedBy { candidate -> candidate.name.lowercase() }
 
     BoxWithConstraints(
-        modifier.fillMaxSize().background(Brush.verticalGradient(colors.backgroundGradient)),
+        modifier
+            .fillMaxSize()
+            .consumeTouches()
+            .background(Brush.verticalGradient(colors.backgroundGradient)),
     ) {
         // Nombre de colonnes réel de l'écran : les ajouts se placent sur cette grille.
         val screenColumns = freeColumnsFor(maxWidth)
@@ -269,7 +315,10 @@ fun CustomDashboardScreen(
 
             // Palette : cases déco, recherche et appareils à ajouter.
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                Row(
+                    modifier = Modifier.horizontalScroll(rememberScrollState()),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                ) {
                     WidgetKind.addable.forEach { kind ->
                         AddChip(
                             icon = kind.iconVector(),
@@ -685,6 +734,7 @@ private fun WidgetKind.iconVector(): ImageVector = when (this) {
     WidgetKind.Photo -> Icons.Rounded.Image
     WidgetKind.Calendar -> Icons.Rounded.CalendarMonth
     WidgetKind.Title -> Icons.Rounded.Title
+    WidgetKind.Spotify -> Icons.Rounded.MusicNote
 }
 
 private fun WidgetKind.labelRes(): Int = when (this) {
@@ -692,6 +742,7 @@ private fun WidgetKind.labelRes(): Int = when (this) {
     WidgetKind.Photo -> R.string.widget_photo
     WidgetKind.Calendar -> R.string.widget_calendar
     WidgetKind.Title -> R.string.widget_title
+    WidgetKind.Spotify -> R.string.widget_spotify
 }
 
 private fun WidgetKind.themeLabelRes(theme: String): Int = when (theme) {
